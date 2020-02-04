@@ -9,7 +9,8 @@ export class AuthController {
     async validateToken(@Res() response, @Param() params): Promise<any> {
         try {
             this.jwtSrvc.verify(params.jwtToken);
-            return response.status(200).send({status: 200, message: 'token is valid'});
+            const payload = this.jwtSrvc.decode(params.jwtToken);
+            return response.status(200).send({status: 200, message: 'token is valid', payload});
         } catch (e) {
             return response.status(200).send({status: 200, message: 'token is invalid'});
         }

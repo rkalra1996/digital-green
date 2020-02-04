@@ -50,7 +50,7 @@ export class UserUtilityService {
         } else {
             // check for its password
             if (user.password === pass) {
-                return { ok: true };
+                return { ok: true, user };
             } else {
                 // incorrect password
                 return { ok: false, status: 401, error: 'INCORRECT PASSWORD' };

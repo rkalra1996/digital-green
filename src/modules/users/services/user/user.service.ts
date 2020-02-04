@@ -16,7 +16,7 @@ export class UserService {
       const isUser = await this.userUSrvc.validateUser(username, password);
       if (isUser['ok']) {
         // get the access token
-        const tokenData = await this.authSrvc.login({username: isUser.username, sub: isUser.userId, email: isUser.email});
+        const tokenData = await this.authSrvc.login({username: isUser.user.username, sub: isUser.user.userId, email: isUser.user.email});
         console.log('user ', username + ' logged in successfully');
         return Promise.resolve({ok: true, data: tokenData});
       } else {
