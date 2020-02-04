@@ -25,6 +25,21 @@ export class UserUtilityService {
         });
     }
 
+    async userExists(username: string): Promise<boolean> {
+        return new Promise(async (resolve, reject) => {
+            this.findUserByUsername(username).then(user => {
+                if (user === null) {
+                    resolve(null);
+                }
+                if (user && Object.keys(user).length > 0) {
+                    resolve(true);
+                } else {
+                    resolve(false);
+                }
+            });
+        });
+    }
+
     async validateUser(username: string, pass: string): Promise<any> {
         const user = await this.findUserByUsername(username);
         if (user && Object.keys(user).length === 0) {
