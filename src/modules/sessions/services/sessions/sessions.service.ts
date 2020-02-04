@@ -8,6 +8,11 @@ export class SessionsService {
         private readonly sessionsUtilitySrvc: SessionsUtilityService,
         private readonly userUtilitySrvc: UserUtilityService) {}
 
+    /**
+     * Gets user sessions
+     * @param username
+     * @returns list of sessions retrieved from the db
+     */
     async getUserSessions(username: string) {
         if (username && typeof username === 'string') {
             // verify if the username is a validone
@@ -28,4 +33,29 @@ export class SessionsService {
             return {ok: false, status: 400, error: 'USERNAME EMPTY'};
         }
     }
+
+    /**
+     * Creates user sessions
+     * @param sessionData
+     * @returns user sessions created with there status
+     */
+    async createUserSessions(sessionData: object): Promise<any> {
+        // TODO: check if the user exists
+        const userExists = await this.userUtilitySrvc.userExists(sessionData['username']);
+        if (typeof userExists === 'boolean') {
+            if (userExists) {
+                // find user sessions
+                const sessionsData = sessionData['sessions'].map(session => {
+                    return {...session, username: sessionData['username']};
+                });
+                const sessionsCreated = await this.sessionsUtilitySrvc.createUserSessionsInBatch(sessionsData);
+                if (sessionsCreated) {
+                    return {ok: true, status: 200, data: sessionsCreated};
+                }
+                return {ok: false, status: 500, error: 'An error occured while creating new sessions for user ' + sessionData['username']};
+                } else {
+                    return {ok: false, status: 400, error: 'USER ' + sessionData['username'] + ' DOES NOT EXISTS'};
+                }
+            }
+        }
 }
