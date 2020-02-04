@@ -1,7 +1,10 @@
-import { Controller, Post, Body, Res } from '@nestjs/common';
+import { Controller, Post, Body, Res, UseGuards } from '@nestjs/common';
 import { SessionsService } from '../../services/sessions/sessions.service';
 import { SessionsUtilityService } from '../../services/sessions-utility/sessions-utility.service';
+import { AuthGuard } from '@nestjs/passport';
 
+// jwt protected controller - All routes must have jwt bearer token to work with
+@UseGuards(AuthGuard('jwt'))
 @Controller('sessions')
 export class SessionsController {
 
