@@ -7,6 +7,9 @@ import { UsersModule } from './modules/users/users.module';
 // connecting data base
 import {MongooseModule} from '@nestjs/mongoose';
 import { SessionsModule } from './modules/sessions/sessions.module';
+import { SharedService } from './services/shared/shared.service';
+import { PathResolverService } from './services/path-resolver/path-resolver.service';
+import { FfmpegUtilityService } from './services/ffmpeg-utility/ffmpeg-utility.service';
 
 @Module({
   imports: [
@@ -15,6 +18,7 @@ import { SessionsModule } from './modules/sessions/sessions.module';
     UsersModule,
     SessionsModule],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [PathResolverService, AppService, SharedService, FfmpegUtilityService],
+  exports: [SharedService, PathResolverService, FfmpegUtilityService],
 })
 export class AppModule {}

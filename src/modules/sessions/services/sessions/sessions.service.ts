@@ -1,12 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { SessionsUtilityService } from '../sessions-utility/sessions-utility.service';
-import { UserUtilityService } from 'src/modules/users/services/user-utility/user-utility.service';
+import { UserUtilityService } from './../../../users/services/user-utility/user-utility.service';
+import { SharedService } from './../../../../services/shared/shared.service';
 
 @Injectable()
 export class SessionsService {
+    public GCLOUD_STORAGE = 'gcloud';
+    public GCLOUD_BUCKET = 'app-blob-storage';
+
     constructor(
         private readonly sessionsUtilitySrvc: SessionsUtilityService,
-        private readonly userUtilitySrvc: UserUtilityService) {}
+        private readonly userUtilitySrvc: UserUtilityService,
+        private readonly sharedSrvc: SharedService,
+        ) {}
 
     /**
      * Gets user sessions
@@ -57,5 +63,41 @@ export class SessionsService {
                     return {ok: false, status: 400, error: 'USER ' + sessionData['username'] + ' DOES NOT EXISTS'};
                 }
             }
+        }
+
+        initiateUpload(sessionObject, cloudType= this.GCLOUD_STORAGE): Promise<any> {
+            return new Promise(async (resolve, reject) => {
+                if (cloudType === this.GCLOUD_STORAGE) {
+                    console.log('initiating gcloud upload sequence\n');
+                    // save the files in disk temporarely
+                    const username = Object.keys(sessionObject)[0];
+                    // const fileDataToSave = sessionObject
+                    const fileDataObject = [];
+                    sessionObject[username].topics.forEach(topic => {
+                        fileDataObject.push({
+                            filename: topic.fileData.originalname,
+                            data: topic.fileData.buffer,
+                        });
+                    });
+                    const filesSaved = await this.sharedSrvc.saveToTempStorage(`${username}/${sessionObject[username]['sessionid']}`, fileDataObject);
+                    // filesSaved will have parentFolder path
+                    if (filesSaved['ok']) {
+                        resolve(true);
+                        const isMonoConverted = await this.sessionsUtilitySrvc.convertTempFilesToMono(username, sessionObject[username]['sessionid']);
+                        if (isMonoConverted['ok']) {
+                            // send the saved path to uploader
+                            this.sessionsUtilitySrvc.uploadFilesToCloudStorage(username, sessionObject[username]['sessionid'])
+                            .then(uploadedToCloud => {
+                                console.log('process uploading to gcloud triggered successfully', uploadedToCloud);
+                            })
+                            .catch(error => {
+                                console.log('An Error occured while triggering upload to gcloud ', error);
+                            });
+                        }
+                    } else {
+                        reject(filesSaved['error']);
+                    }
+                }
+            });
         }
 }

@@ -1,12 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { PathResolverService } from 'src/services/path-resolver/path-resolver.service';
+import {resolve} from 'path';
+import { GcloudService } from './../../../gcloud/services/gcloud/gcloud.service';
+import { FfmpegUtilityService } from '../../../../services/ffmpeg-utility/ffmpeg-utility.service';
 
 export type Session = any;
 
 @Injectable()
 export class SessionsUtilityService {
-    constructor(@InjectModel('sessions') private readonly SessionModel: Model<Session>) {}
+    constructor(
+        @InjectModel('sessions') private readonly SessionModel: Model<Session>,
+        private readonly pathResolver: PathResolverService,
+        private readonly gcloudSrvc: GcloudService,
+        private readonly ffmpeg: FfmpegUtilityService
+        ) {}
 
     /**
      * Gets session list
@@ -96,6 +105,72 @@ export class SessionsUtilityService {
             .catch(insertErr => {
                 console.log('insert Error', insertErr);
                 resolve(null);
+            });
+        });
+    }
+
+    /**
+     * Gets session details from db and bucket details accordingly
+     * @param files
+     * @returns object containing session details
+     */
+        getSessionDetailsObject(files) {
+            const sessionDetailsObject = {};
+            return new Promise((resolve, reject) => {
+                try {
+                    files.forEach(file => {
+                        // writeFileSync(file.originalname, file.buffer);
+                        const info = file.originalname.split('_');
+                        // storing username
+                        const username = info[0];
+                        const sessionid = info[1];
+                        const topicname = info[2].split('.wav')[0];
+                        if (sessionDetailsObject.hasOwnProperty(username)) {
+                            // append to the user object
+                            const fileObj = {...file};
+                            fileObj['filename'] = fileObj.originalname.split('.wav')[0];
+                            sessionDetailsObject[username]['topics'].push({name: topicname, fileData: fileObj});
+                        } else {
+                            // new username
+                            sessionDetailsObject[username] = {};
+                            // storing session id
+                            sessionDetailsObject[username]['sessionid'] = sessionid;
+                            // storing topic name
+                            sessionDetailsObject[username]['topics'] = [];
+                            const fileObj = {...file};
+                            fileObj['filename'] = fileObj.originalname.split('.wav')[0];
+                            sessionDetailsObject[username]['topics'].push({name: topicname, fileData: fileObj});
+                        }
+                    });
+                    resolve(sessionDetailsObject);
+                } catch (e) {
+                    console.log('An error occured while creating session details object ', e);
+                    resolve(null);
+                }
+            });
+        }
+
+    uploadFilesToCloudStorage(username, sessionID, parentSourceAddress?: string) {
+        if (!parentSourceAddress) {
+            parentSourceAddress = resolve(this.pathResolver.paths.TEMP_STORE_PATH);
+        }
+        console.log('to upload files from ', `${username}/${sessionID} inside `, parentSourceAddress);
+        const addressObject = {
+            parentFolderName: username,
+            parentFolderAddress: resolve(parentSourceAddress, username),
+            filesParentFolderAddr : sessionID,
+        };
+        return this.gcloudSrvc.uploadFilesToGCloud(addressObject);
+    }
+
+    convertTempFilesToMono(username, sessionID) {
+        return new Promise((monoResolve, monoReject) => {
+            const parentFolderAddr = resolve(this.pathResolver.paths.TEMP_STORE_PATH, username, sessionID);
+            console.log('parent folder to pick files for mono conversion is ', parentFolderAddr);
+            // start mono conversion
+            this.ffmpeg.convertStereo2Mono(parentFolderAddr, () => {
+                console.log('conversion to mono done');
+                monoResolve({ok: true});
             });
         });
     }

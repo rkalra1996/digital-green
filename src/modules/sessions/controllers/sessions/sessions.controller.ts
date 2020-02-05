@@ -1,7 +1,8 @@
-import { Controller, Post, Body, Res, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Res, UseGuards, Param, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { SessionsService } from '../../services/sessions/sessions.service';
 import { SessionsUtilityService } from '../../services/sessions-utility/sessions-utility.service';
 import { AuthGuard } from '@nestjs/passport';
+import {FilesInterceptor} from '@nestjs/platform-express';
 
 // jwt protected controller - All routes must have jwt bearer token to work with
 @UseGuards(AuthGuard('jwt'))
@@ -37,5 +38,24 @@ export class SessionsController {
         } else {
             return response.status(400).send({status: 400, error: isBodyValid['error']});
         }
+    }
+
+    @Post('upload')
+    @UseInterceptors(FilesInterceptor('session_recordings'))
+    async uploadSessionToCloud(@Res() response , @Param() params, @UploadedFiles() sessionRawFiles): Promise<any> {
+        console.log('POST /sessions/upload');
+        const sessionDetailsObject = await this.sessionsUSrvc.getSessionDetailsObject(sessionRawFiles);
+        if (!sessionDetailsObject) {
+            return response.status(500).send({status: 500, error: 'An error occured while collecting files for upload, try again later'});
+        }
+        // sessionDetails are ready, initiate upload
+        this.sessionsSrvc.initiateUpload(sessionDetailsObject)
+        .then(sessionUploaded => {
+            console.log('Session uploaded started successfully');
+        })
+        .catch(sessionUploadError => {
+            console.log('An error occured while complete session upload');
+        });
+        return response.status(200).send({status: 200, message: 'Upload procedure started successfully'});
     }
 }
