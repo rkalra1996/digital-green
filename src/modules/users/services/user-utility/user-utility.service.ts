@@ -10,17 +10,18 @@ export class UserUtilityService {
 
     async findUserByUsername(username: string): Promise<User | undefined> {
         return new Promise((resolve, reject) => {
-            this.UserModel.findOne({ username }, (err, userFound) => {
-                if (err) {
-                    console.log('An error occured while retriving user for login', err);
-                    resolve(null);
-                }
+            this.UserModel.findOne({ username })
+            .then(userFound => {
                 if (userFound === null) {
                     // no such user exists
                     resolve({});
                 } else {
                     resolve(userFound);
                 }
+            })
+            .catch(err => {
+                console.log('An error occured while retriving user for login', err);
+                resolve(null);
             });
         });
     }

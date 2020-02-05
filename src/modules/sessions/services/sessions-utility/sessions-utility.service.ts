@@ -16,17 +16,18 @@ export class SessionsUtilityService {
      */
     async getSessionList(username: string) {
         return new Promise((resolve, reject) => {
-            this.SessionModel.find({username}, (err, sessionList) => {
-                if (err) {
-                    console.log('Error while fetching sessions list for ', username);
-                    console.log(err);
-                    resolve(null);
-                } else if (Array.isArray(sessionList)) {
+            this.SessionModel.find({username}).sort('-created') // sort with most recent created sessions
+            .then(sessionList => {
+                if (Array.isArray(sessionList)) {
                     resolve(sessionList);
                 } else if (sessionList === null) {
                     // no results found
                     resolve([]);
                 }
+            }).catch(err => {
+                console.log('Error while fetching sessions list for ', username);
+                console.log(err);
+                resolve(null);
             });
         });
     }
@@ -39,7 +40,8 @@ export class SessionsUtilityService {
             (
                 !sessionData.hasOwnProperty('name') ||
                 !sessionData.hasOwnProperty('created') ||
-                !sessionData.hasOwnProperty('session_id')
+                !sessionData.hasOwnProperty('session_id') ||
+                !sessionData.hasOwnProperty('isUploaded')
                 )
             ) {
                 return false;

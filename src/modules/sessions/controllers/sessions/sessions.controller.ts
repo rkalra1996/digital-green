@@ -13,9 +13,9 @@ export class SessionsController {
         private readonly sessionsUSrvc: SessionsUtilityService,
         ) {}
 
-    @Post('')
+    @Post('read')
     async getSessions(@Body() requestBody, @Res() response): Promise<any> {
-        console.log('POST sessions');
+        console.log('POST sessions/read');
         const getSessions = await this.sessionsSrvc.getUserSessions(requestBody.username);
         if (getSessions['ok']) {
             return response.status(200).send({status: 200, data: getSessions['data']});
