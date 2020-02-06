@@ -179,9 +179,9 @@ export class SessionsUtilityService {
 
     updateSessionFileStatus(sessionFileObject): Promise<any> {
         console.log('updating session file status in database');
-        return new Promise((sessionFileResolve, sessionFileReject) => {
+        return new Promise(async (sessionFileResolve, sessionFileReject) => {
             // check if user exists
-            if (this.userUtilitySrvc.userExists(sessionFileObject.username)) {
+            if (await this.userUtilitySrvc.userExists(sessionFileObject.username)) {
                 // check if session is already created
                 this.getSessionBySessionID(sessionFileObject.username, sessionFileObject.sessionID)
                 .then(fetchedSession => {
@@ -269,5 +269,52 @@ export class SessionsUtilityService {
                 getSessionReject({ok: false, error: 'An error occured while verifying session id'});
             });
         });
+    }
+
+    checkUsername(usernameToValidate) {
+        return new Promise((validresolve, reject) => {
+            if (!usernameToValidate) {
+                validresolve(false);
+            } else {
+                validresolve(this.userUtilitySrvc.userExists(usernameToValidate).catch(() => validresolve(false)));
+            }
+        });
+    }
+
+    getSessionsStatus(username) {
+        return new Promise((resolve, reject) => {
+            this.SessionModel.find({
+                username,
+            })
+            .sort('-created')
+            .then(sessionsData => {
+                resolve({ok: true, data: sessionsData});
+            })
+            .catch((fetchErr) => {
+                console.log('Error while fetching session for user ', username);
+                console.log(fetchErr);
+                resolve({ok: false, error: `Error while fetching session for user ${username}`});
+            });
+        });
+    }
+
+    formatObject(sessionObject) {
+        const cleanedObjectData = sessionObject.data.map(session => {
+            const finalObj = {
+                name: session.name,
+                session_id: session.session_id,
+                isUploaded: session.isUploaded,
+                username: session.username,
+            };
+            finalObj['topics'] = [];
+            for (const topic of session.topics) {
+                finalObj['topics'].push({
+                    name: topic.topic_name, 
+                    isUploaded: topic.isUploaded, 
+                    topic_id: topic.topic_id ?  topic.topic_id : null});
+            }
+            return finalObj;
+        });
+        return cleanedObjectData;
     }
 }

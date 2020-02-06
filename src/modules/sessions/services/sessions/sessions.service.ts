@@ -100,4 +100,15 @@ export class SessionsService {
                 }
             });
         }
+
+    async getUserSessionsStatus(username) {
+        const sessionsData = await this.sessionsUtilitySrvc.getSessionsStatus(username);
+        if (sessionsData['ok']) {
+            const finalResponseObject = this.sessionsUtilitySrvc.formatObject(sessionsData);
+            // console.log(finalResponseObject);
+            return {ok: true, data: finalResponseObject};
+        } else {
+            return {ok: false, error: sessionsData['error']};
+        }
+    }
 }

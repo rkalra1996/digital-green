@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Res, UseGuards, Param, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Post, Body, Res, UseGuards, Param, UseInterceptors, UploadedFiles, Get } from '@nestjs/common';
 import { SessionsService } from '../../services/sessions/sessions.service';
 import { SessionsUtilityService } from '../../services/sessions-utility/sessions-utility.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -57,5 +57,22 @@ export class SessionsController {
             console.log('An error occured while complete session upload');
         });
         return response.status(200).send({status: 200, message: 'Upload procedure started successfully'});
+    }
+
+    @Get('status/:username')
+    async getSessionsStatus(@Res() response, @Param() params): Promise<any> {
+        console.log(`GET sessions/status/${params.username}`);
+        if (await this.sessionsUSrvc.checkUsername(params.username)) {
+            console.log('user exists');
+            const sessionStatus = await this.sessionsSrvc.getUserSessionsStatus(params.username);
+            if (sessionStatus['ok']) {
+                return response.status(200).send({status: 200, data: sessionStatus['data']});
+            } else {
+                return response.status(sessionStatus['status']).send({status: sessionStatus['status'], error: sessionStatus['error']});
+            }
+        } else {
+            console.log('user does not exist');
+            return response.status(400).send({status: 400, error: `Username ${params.username} is undefined or does not exists`});
+        }
     }
 }
