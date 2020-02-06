@@ -25,17 +25,29 @@ export class FfmpegUtilityService {
         console.log('folder to scan stereo files is ', folderAddress);
         // resolve with true if all the files are converted else resolve with false
         // pick files one by one and convert them
-        fs.readdir(folderAddress, (err, files) => {
+        fs.readdir(folderAddress, (err, dirItems) => {
             // handling error
             if (err) {
                 console.log('Unable to scan directory for wav stereo files', err);
                 return {ok: false, error: 'Unable to scan directory for wav stereo files'};
             }
             // listing all files using forEach
-
-            const originalWAVFilesCount = files.length;
+            // count the wav files present in the directory (only wav files, ignore every other file)
+            let originalWAVFilesCount = 0;
+            const wavFiles = [];
+            dirItems.forEach(item => {
+                const itemAddress = path.resolve(folderAddress, item);
+                if ( fs.lstatSync(itemAddress).isFile()) {
+                    // check if it is a wav file
+                    if (path.extname(itemAddress) === '.wav') {
+                        originalWAVFilesCount += 1;
+                        wavFiles.push(item);
+                    }
+                }
+            });
             this.globalFilesCount = 0;
-            files.forEach((fileName) => {
+            console.log('wav files detected inside the parent folder are ', wavFiles);
+            wavFiles.forEach((fileName) => {
                 // execute the conversion command
                 this.runProcess(folderAddress, fileName, originalWAVFilesCount, finalCallBack);
             });
@@ -95,6 +107,7 @@ export class FfmpegUtilityService {
 
     moveProcessedFile(fileNamePath): Promise<any> {
         // extract the file name by splitting the folder path, since folder and file name will be same
+
         return Promise.resolve({ok: true});
         }
 
@@ -121,6 +134,13 @@ export class FfmpegUtilityService {
             fs.renameSync(originalFileAddr, processedFilePath);
             // increment global filesCount for verification
             this.globalFilesCount += 1;
+            // move the new mono file inside a folder
+            const newMonoFolderAddress = path.resolve(parentDir, 'mono');
+            if (!fs.existsSync(newMonoFolderAddress)) {
+                fs.mkdirSync(newMonoFolderAddress);
+            }
+            console.log(`moving file from \n${path.resolve(monoFileAddr)} ----> ${path.resolve(newMonoFolderAddress, monoFileName)}`);
+            fs.renameSync(path.resolve(monoFileAddr), path.resolve(newMonoFolderAddress, monoFileName));
             return Promise.resolve(true);
         } else {
             console.error(`COULD NOT CONVERT ${originalFileName} TO MONO FOR SOME REASON`);

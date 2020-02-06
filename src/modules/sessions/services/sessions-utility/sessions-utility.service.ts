@@ -152,17 +152,30 @@ export class SessionsUtilityService {
             });
         }
 
-    uploadFilesToCloudStorage(username, sessionID, parentSourceAddress?: string) {
+    uploadFilesToCloudStorage(username, sessionID, parentSourceAddress?: string, fileNames?: any[]) {
         if (!parentSourceAddress) {
             parentSourceAddress = resolve(this.pathResolver.paths.TEMP_STORE_PATH);
+            console.log('to upload files from ', `${username}/${sessionID}/mono inside `, parentSourceAddress);
+        } else {
+            console.log('to upload files from ', `${parentSourceAddress}`);
         }
-        console.log('to upload files from ', `${username}/${sessionID} inside `, parentSourceAddress);
-        const addressObject = {
+        let addressObject = {};
+        if (Array.isArray(fileNames) && fileNames.length > 0) {
+            console.log('joining file names ', fileNames);
+            addressObject = {
+            filePaths: fileNames.map(fileName => resolve(parentSourceAddress,username,sessionID, 'mono', fileName)),
+            };
+            console.log('object looks like', addressObject);
+        } else {
+            addressObject = {
             parentFolderName: username,
             parentFolderAddress: resolve(parentSourceAddress, username),
-            filesParentFolderAddr : sessionID,
-        };
-        return this.gcloudSrvc.uploadFilesToGCloud(addressObject);
+            filesParentFolderAddr : `${sessionID}/mono`,
+            };
+        }
+        const cloudDestinationDir = `${username}/${sessionID}`;
+        // because we don't want to upload inside mono folder.
+        return this.gcloudSrvc.uploadFilesToGCloud(addressObject, undefined, cloudDestinationDir);
     }
 
     convertTempFilesToMono(username, sessionID) {
@@ -325,4 +338,9 @@ export class SessionsUtilityService {
         });
         return cleanedObjectData;
     }
+    /* updateUploadingSessionStatusToDB(sessionObject, username) {
+        this.SessionModel.find({username}).then(sessionDoc => {
+
+        });
+    } */
 }

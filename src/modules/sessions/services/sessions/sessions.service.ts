@@ -86,9 +86,23 @@ export class SessionsService {
                         const isMonoConverted = await this.sessionsUtilitySrvc.convertTempFilesToMono(username, sessionObject[username]['sessionid']);
                         if (isMonoConverted['ok']) {
                             // send the saved path to uploader
-                            this.sessionsUtilitySrvc.uploadFilesToCloudStorage(username, sessionObject[username]['sessionid'])
-                            .then(uploadedToCloud => {
+                            // send the file names to upload, at this point we are sure that files have been converted to mono
+                            // so the file names would start from mono_
+                            const monoFileNames = fileDataObject.map(fileObj => `mono_${fileObj.filename}`);
+                            this.sessionsUtilitySrvc.uploadFilesToCloudStorage(
+                                username,
+                                sessionObject[username]['sessionid'],
+                                undefined,
+                                monoFileNames,
+                                ).then(uploadedToCloud => {
                                 console.log('process uploading to gcloud triggered successfully', uploadedToCloud);
+                                // update the status of uploading  topics in the database
+                                /* this.sessionsUtilitySrvc.updateUploadingSessionStatusToDB(sessionObject, username).then((res) => {
+                                    console.log('updated uploading status to database');
+                                }).catch(e => {
+    console.log('error updating the uploading status to database for session ', sessionObject[username]['sessionid'] + ' of ' + username);
+                                    console.log(e);
+                                }); */
                             })
                             .catch(error => {
                                 console.log('An Error occured while triggering upload to gcloud ', error);

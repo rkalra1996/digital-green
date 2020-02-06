@@ -16,16 +16,39 @@ export class GcloudService {
         this._DEFAULT_BUCKET_NAME = 'app-blob-storage';
     }
 
-    uploadFilesToGCloud(parentFolderAddrObject, bucketName?: string): Promise<any> {
+    uploadFilesToGCloud(parentFolderAddrObject, bucketName?: string, cloudFilePath?: string): Promise<any> {
         return new Promise((resolve, reject) => {
             if (!bucketName) {
                 console.log('bucket name not provided, using default bucket ', this._DEFAULT_BUCKET_NAME);
                 bucketName = this._DEFAULT_BUCKET_NAME;
             }
+            const uploadPromises = [];
+            // if specific file paths are given
+            if (parentFolderAddrObject.hasOwnProperty('filePaths')) {
+                // cloudPath is mandatory
+                if (!cloudFilePath) {
+                    console.log('Cannot upload file paths if cloud dest path is not given (mandatory)');
+                    reject('Cannot upload file paths if cloud dest path is not given (mandatory)');
+                    return;
+                } else {
+                    // directly upload these files only
+                    parentFolderAddrObject.filePaths.forEach(filePath => {
+                        console.log('uploading filepath -> ', filePath);
+                        const fileInfoArr = filePath.split('/');
+                        console.log('file split information ', fileInfoArr);
+                        cloudFilePath = `${cloudFilePath}/${fileInfoArr[fileInfoArr.length - 1]}`;
+                        console.log('triggering upload in cloud dir -->', cloudFilePath);
+                        uploadPromises.push(
+                            this.storage.bucket(bucketName).upload(filePath, {
+                                destination: cloudFilePath,
+                                resumable: false,
+                            }),
+                        );
+                    });
+                }
+            } else {
             const pathToFiles  = pathResolve(parentFolderAddrObject.parentFolderAddress, parentFolderAddrObject.filesParentFolderAddr);
             // delegate storage object
-            // this.storage = new Storage();
-            const uploadPromises = [];
             readdir(pathToFiles, (err, dirData) => {
                 if (err) {
                     console.log(err);
@@ -34,7 +57,13 @@ export class GcloudService {
                     dirData.forEach(dirItem => {
                         const pathToFile = pathResolve(pathToFiles, dirItem);
                         if (lstatSync(pathToFile).isFile()) {
-                            const cloudFilePath = `${parentFolderAddrObject.parentFolderName}/${parentFolderAddrObject.filesParentFolderAddr}/${dirItem}`;
+                            if (!cloudFilePath) {
+                                cloudFilePath = `${parentFolderAddrObject.parentFolderName}/${parentFolderAddrObject.filesParentFolderAddr}/${dirItem}`;
+                            } else {
+                                // use the user defined cloud path
+                                cloudFilePath = `${cloudFilePath}/${dirItem}`;
+                            }
+                            console.log('triggering upload in cloud dir -->', cloudFilePath);
                             uploadPromises.push(
                                 this.storage.bucket(bucketName).upload(pathToFile, {
                                     destination: cloudFilePath,
@@ -45,6 +74,7 @@ export class GcloudService {
                     });
                 }
             });
+        }
             Promise.all(uploadPromises)
             .then(() => {
                 resolve(true);
