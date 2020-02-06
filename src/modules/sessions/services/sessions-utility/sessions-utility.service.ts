@@ -185,6 +185,8 @@ export class SessionsUtilityService {
                 // check if session is already created
                 this.getSessionBySessionID(sessionFileObject.username, sessionFileObject.sessionID)
                 .then(fetchedSession => {
+                    console.log('fetched session from database is ');
+                    console.log(fetchedSession);
                     const newTopicsArray = [...fetchedSession.topics];
                     // add the file status to the session
                     const existingTopicIndex = newTopicsArray.findIndex(topic => topic.topic_name === sessionFileObject.topicName);
@@ -258,15 +260,21 @@ export class SessionsUtilityService {
 
     getSessionBySessionID(username, sessionID): Promise<any> {
         return new Promise((getSessionResolve, getSessionReject) => {
+            console.log('finding user ', username + ' with session id ' + sessionID);
             this.SessionModel.findOne({
                 username,
                 session_id: sessionID,
             }).then(sessionDoc => {
+                if (!sessionDoc) {
+                    console.log('did not find any document in sessions collection corresponding to session_id', sessionID);
+                    getSessionReject({ok: false, error: 'did not find any document in sessions collection corresponding to session_id ' + sessionID});
+                }
+                console.log('session object retrieved from db', sessionDoc);
                 getSessionResolve(sessionDoc);
             })
             .catch(sessionError => {
                 console.log('sessionError : ', sessionError);
-                getSessionReject({ok: false, error: 'An error occured while verifying session id'});
+                getSessionReject({ok: false, error: 'An error occured while verifying session username or session_id'});
             });
         });
     }
