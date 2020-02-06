@@ -16,5 +16,6 @@ import { FfmpegUtilityService } from '../../services/ffmpeg-utility/ffmpeg-utili
         UsersModule, GcloudModule],
     providers: [SessionsService, SessionsUtilityService, SharedService, PathResolverService, FfmpegUtilityService],
     controllers: [SessionsController],
+    exports: [SessionsUtilityService],
 })
 export class SessionsModule {}

@@ -5,6 +5,7 @@ import { PathResolverService } from 'src/services/path-resolver/path-resolver.se
 import {resolve} from 'path';
 import { GcloudService } from './../../../gcloud/services/gcloud/gcloud.service';
 import { FfmpegUtilityService } from '../../../../services/ffmpeg-utility/ffmpeg-utility.service';
+import { UserUtilityService } from '../../../users/services/user-utility/user-utility.service';
 
 export type Session = any;
 
@@ -14,7 +15,8 @@ export class SessionsUtilityService {
         @InjectModel('sessions') private readonly SessionModel: Model<Session>,
         private readonly pathResolver: PathResolverService,
         private readonly gcloudSrvc: GcloudService,
-        private readonly ffmpeg: FfmpegUtilityService
+        private readonly ffmpeg: FfmpegUtilityService,
+        private readonly userUtilitySrvc: UserUtilityService,
         ) {}
 
     /**
@@ -171,6 +173,100 @@ export class SessionsUtilityService {
             this.ffmpeg.convertStereo2Mono(parentFolderAddr, () => {
                 console.log('conversion to mono done');
                 monoResolve({ok: true});
+            });
+        });
+    }
+
+    updateSessionFileStatus(sessionFileObject): Promise<any> {
+        console.log('updating session file status in database');
+        return new Promise((sessionFileResolve, sessionFileReject) => {
+            // check if user exists
+            if (this.userUtilitySrvc.userExists(sessionFileObject.username)) {
+                // check if session is already created
+                this.getSessionBySessionID(sessionFileObject.username, sessionFileObject.sessionID)
+                .then(fetchedSession => {
+                    const newTopicsArray = [...fetchedSession.topics];
+                    // add the file status to the session
+                    const existingTopicIndex = newTopicsArray.findIndex(topic => topic.topic_name === sessionFileObject.topicName);
+                    if (existingTopicIndex > -1) {
+                        console.log('updating topic');
+                        // update the topic
+                        newTopicsArray[existingTopicIndex]['file_data']['bucketname'] = sessionFileObject.bucketname;
+                        newTopicsArray[existingTopicIndex]['file_data']['filename'] = sessionFileObject.filename;
+                        newTopicsArray[existingTopicIndex]['file_data']['mediaURI'] = sessionFileObject.gsURI;
+                        newTopicsArray[existingTopicIndex]['file_data']['uploadedOn'] = sessionFileObject.uploadedOn;
+                        newTopicsArray[existingTopicIndex]['file_data']['modifiedOn'] = sessionFileObject.modifiedOn;
+                        newTopicsArray[existingTopicIndex]['file_data']['mediasize'] = sessionFileObject.mediaSize;
+                        newTopicsArray[existingTopicIndex]['file_data']['ismono'] = true;
+                        newTopicsArray[existingTopicIndex]['isUploaded'] = true;
+                    } else {
+                        console.log('new topic');
+                        // new topic entry
+                        newTopicsArray.push({
+                            topic_name: sessionFileObject.topicName,
+                            isUploaded: true,
+                            file_data: {
+                                bucketname: sessionFileObject.bucketname,
+                                mediaURI: sessionFileObject.gsURI,
+                                filename: sessionFileObject.filename,
+                                uploadedOn: sessionFileObject.uploadedOn,
+                                modifiedOn: sessionFileObject.modifiedOn,
+                                mediasize: sessionFileObject.mediaSize,
+                                ismono: true,
+                            },
+                        });
+                    }
+                    // verify if all the topics are updated
+                    let allUploaded = false;
+                    if (newTopicsArray.length === 3) {
+                        if (!newTopicsArray.filter(topic => topic.isUploaded === false).length) {
+                            // all topics have there files, set global uploaded status to true
+                            console.log('detected all topics having there respective cloud files');
+                            allUploaded = true;
+                        }
+                    }
+                    // all data has been modified
+                    console.log('final updation object"s topics looks like ');
+                    console.log(newTopicsArray);
+                    /* sessionFileResolve({ok: true}); */
+                    this.SessionModel.updateOne(
+                        {
+                        username: sessionFileObject.username,
+                        session_id: sessionFileObject.sessionID}
+                        , {
+                            isUploaded: allUploaded !== fetchedSession.isUploaded ? allUploaded : fetchedSession.isUploaded,
+                            topics: [...newTopicsArray],
+                        },
+                        ).then(updatedDoc => {
+                            console.log('updated doc now looks like ');
+                            console.log(updatedDoc);
+                            sessionFileResolve({ok: true});
+                        }).catch(updationError => {
+                            console.log(updationError);
+                            sessionFileReject({ok: false, error: 'An Error occured while updating the database document'});
+                        });
+                })
+                .catch(sessionFetchError => {
+                    console.log(sessionFetchError['error']);
+                    sessionFileReject({ok: false, error: sessionFetchError['error']});
+                });
+            } else {
+                sessionFileReject({ok: false, error: `Username ${sessionFileObject.username} does not exist in the user collection`});
+            }
+        });
+    }
+
+    getSessionBySessionID(username, sessionID): Promise<any> {
+        return new Promise((getSessionResolve, getSessionReject) => {
+            this.SessionModel.findOne({
+                username,
+                session_id: sessionID,
+            }).then(sessionDoc => {
+                getSessionResolve(sessionDoc);
+            })
+            .catch(sessionError => {
+                console.log('sessionError : ', sessionError);
+                getSessionReject({ok: false, error: 'An error occured while verifying session id'});
             });
         });
     }

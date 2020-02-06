@@ -10,13 +10,15 @@ import { SessionsModule } from './modules/sessions/sessions.module';
 import { SharedService } from './services/shared/shared.service';
 import { PathResolverService } from './services/path-resolver/path-resolver.service';
 import { FfmpegUtilityService } from './services/ffmpeg-utility/ffmpeg-utility.service';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 
 @Module({
   imports: [
     AuthModule,
     MongooseModule.forRoot('mongodb://localhost/digital_green', {useNewUrlParser: true, useUnifiedTopology: true, reconnectTries: 2}),
     UsersModule,
-    SessionsModule],
+    SessionsModule,
+    WebhooksModule],
   controllers: [AppController],
   providers: [PathResolverService, AppService, SharedService, FfmpegUtilityService],
   exports: [SharedService, PathResolverService, FfmpegUtilityService],
