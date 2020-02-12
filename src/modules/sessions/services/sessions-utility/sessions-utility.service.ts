@@ -99,7 +99,39 @@ export class SessionsUtilityService {
     async createUserSessionsInBatch(sessions) {
         return new Promise((resolve, reject) => {
             console.log('inserting ', sessions);
-            this.SessionModel.insertMany([...sessions])
+            if (sessions.length > 1) {
+                console.log('cannot insert more than one sessions at a time');
+                resolve({ok: false, error: 'Multiple sessions sent for insert'});
+            } else {
+                // read the session first, if it exists, ignore else create
+                const sessionToInsert = sessions[0];
+                console.log('session to insert is ', sessionToInsert);
+                this.SessionModel.find({session_id: sessionToInsert.session_id})
+                .then(sessionRead => {
+                    console.log('session read is ', sessionRead);
+                    if (Array.isArray(sessionRead) && sessionRead.length < 1) {
+                        // no session id exists, creating new one
+                        console.log('No such session already present for ', sessionToInsert.session_id);
+                        // no such session found, insert it
+                        this.SessionModel.create({...sessionToInsert})
+                        .then(sessionCreated => {
+                            console.log('session created ', sessionCreated);
+                            resolve(sessionCreated);
+                        })
+                        .catch(creationError => {
+                            console.log('Error while creating a new session ', creationError);
+                            resolve(null);
+                        });
+                    } else {
+                        console.log('unexpected session read response ', sessionRead);
+                        resolve({ok: true, message: `session already exists, won't create a new one`});
+                    }
+                })
+                .catch(sessionReadErr => {
+                    console.log('error while reading an existing session', sessionReadErr);
+                    resolve(null);
+                });
+                /* this.SessionModel.insertMany([...sessions])
             .then(isInserted => {
                 console.log('inserted ', isInserted);
                 resolve(isInserted);
@@ -107,7 +139,8 @@ export class SessionsUtilityService {
             .catch(insertErr => {
                 console.log('insert Error', insertErr);
                 resolve(null);
-            });
+            }); */
+            }
         });
     }
 
@@ -178,12 +211,13 @@ export class SessionsUtilityService {
         return this.gcloudSrvc.uploadFilesToGCloud(addressObject, undefined, cloudDestinationDir);
     }
 
-    convertTempFilesToMono(username, sessionID) {
+    convertTempFilesToMono(username, sessionID, topicID) {
         return new Promise((monoResolve, monoReject) => {
             const parentFolderAddr = resolve(this.pathResolver.paths.TEMP_STORE_PATH, username, sessionID);
             console.log('parent folder to pick files for mono conversion is ', parentFolderAddr);
             // start mono conversion
-            this.ffmpeg.convertStereo2Mono(parentFolderAddr, () => {
+            const fileName = `${username}_${sessionID}_${topicID}.wav`;
+            this.ffmpeg.convertStereo2Mono(parentFolderAddr, fileName , () => {
                 console.log('conversion to mono done');
                 monoResolve({ok: true});
             });

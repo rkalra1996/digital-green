@@ -3,10 +3,11 @@ import { SessionsUtilityService } from '../sessions-utility/sessions-utility.ser
 import { UserUtilityService } from './../../../users/services/user-utility/user-utility.service';
 import { SharedService } from './../../../../services/shared/shared.service';
 
+import {env as ENV} from 'process';
 @Injectable()
 export class SessionsService {
     public GCLOUD_STORAGE = 'gcloud';
-    public GCLOUD_BUCKET = 'app-blob-storage';
+    public GCLOUD_BUCKET = ENV.GOOGLE_APP_STORAGE;
 
     constructor(
         private readonly sessionsUtilitySrvc: SessionsUtilityService,
@@ -83,7 +84,9 @@ export class SessionsService {
                     // filesSaved will have parentFolder path
                     if (filesSaved['ok']) {
                         resolve(true);
-                        const isMonoConverted = await this.sessionsUtilitySrvc.convertTempFilesToMono(username, sessionObject[username]['sessionid']);
+                        // tslint:disable-next-line: max-line-length
+                        console.log('session object looks like ', sessionObject);
+                        const isMonoConverted = await this.sessionsUtilitySrvc.convertTempFilesToMono(username, sessionObject[username]['sessionid'], sessionObject[username]['topics'][0]['name']);
                         if (isMonoConverted['ok']) {
                             // send the saved path to uploader
                             // send the file names to upload, at this point we are sure that files have been converted to mono
