@@ -1,3 +1,7 @@
+// tslint:disable-next-line: no-var-requires
+const config = require('dotenv').config();
+import {env as ENV} from 'process';
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
@@ -7,7 +11,7 @@ async function bootstrap() {
   });
   // enable cors
   app.enableCors();
-  await app.listen(3000);
-  console.log('server up and running at port -> ', 3000);
+  await app.listen(ENV.SERVER_PORT);
+  console.log('server up and running at port -> ', ENV.SERVER_PORT);
 }
 bootstrap();

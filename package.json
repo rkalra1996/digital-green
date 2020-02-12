@@ -22,11 +22,13 @@
   "dependencies": {
     "@google-cloud/storage": "^4.3.0",
     "@nestjs/common": "^6.7.2",
+    "@nestjs/config": "^0.2.2",
     "@nestjs/core": "^6.7.2",
     "@nestjs/jwt": "^6.1.1",
     "@nestjs/mongoose": "^6.3.1",
     "@nestjs/passport": "^6.1.1",
     "@nestjs/platform-express": "^6.7.2",
+    "dotenv": "^8.2.0",
     "mongoose": "^5.8.11",
     "passport": "^0.4.1",
     "passport-jwt": "^4.0.0",

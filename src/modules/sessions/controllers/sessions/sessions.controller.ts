@@ -42,8 +42,10 @@ export class SessionsController {
 
     @Post('upload')
     @UseInterceptors(FilesInterceptor('session_recordings'))
-    async uploadSessionToCloud(@Res() response , @Param() params, @UploadedFiles() sessionRawFiles): Promise<any> {
+    async uploadSessionToCloud(@Res() response , @Param() params, @UploadedFiles() sessionRawFiles, @Body() requestBody): Promise<any> {
         console.log('POST /sessions/upload');
+        console.log(sessionRawFiles);
+        console.log(requestBody);
         const sessionDetailsObject = await this.sessionsUSrvc.getSessionDetailsObject(sessionRawFiles);
         if (!sessionDetailsObject) {
             return response.status(500).send({status: 500, error: 'An error occured while collecting files for upload, try again later'});

@@ -12,10 +12,15 @@ import { PathResolverService } from './services/path-resolver/path-resolver.serv
 import { FfmpegUtilityService } from './services/ffmpeg-utility/ffmpeg-utility.service';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 
+// importing environments
+// import {ConfigModule, ConfigService} from '@nestjs/config';
+import {env as ENV} from 'process';
+
 @Module({
   imports: [
+    // ConfigModule.forRoot({isGlobal: true}),
     AuthModule,
-    MongooseModule.forRoot('mongodb://localhost/digital_green', {useNewUrlParser: true, useUnifiedTopology: true, reconnectTries: 2}),
+    MongooseModule.forRoot(ENV.DB_HOST, {useNewUrlParser: true, useUnifiedTopology: true, reconnectTries: 2}),
     UsersModule,
     SessionsModule,
     WebhooksModule],
