@@ -1,6 +1,6 @@
 import * as mongoose from 'mongoose';
 
-export const SessionSchema = new mongoose.Schema({
+export const TopicSchema = new mongoose.Schema({
     name: { type: String, required: true },
     created: { type: Date, required: true },
     session_id: { type: String, required: true },

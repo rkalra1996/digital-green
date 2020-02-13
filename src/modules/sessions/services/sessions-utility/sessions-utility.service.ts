@@ -52,7 +52,8 @@ export class SessionsUtilityService {
                 !sessionData.hasOwnProperty('name') ||
                 !sessionData.hasOwnProperty('created') ||
                 !sessionData.hasOwnProperty('session_id') ||
-                !sessionData.hasOwnProperty('isUploaded')
+                !sessionData.hasOwnProperty('isUploaded') ||
+                !sessionData.hasOwnProperty('topics_limit')
                 )
             ) {
                 return false;
@@ -247,12 +248,14 @@ export class SessionsUtilityService {
                         newTopicsArray[existingTopicIndex]['file_data']['modifiedOn'] = sessionFileObject.modifiedOn;
                         newTopicsArray[existingTopicIndex]['file_data']['mediasize'] = sessionFileObject.mediaSize;
                         newTopicsArray[existingTopicIndex]['file_data']['ismono'] = true;
+                        // setting it true for now, then rechecking it later
                         newTopicsArray[existingTopicIndex]['isUploaded'] = true;
                     } else {
                         console.log('new topic');
                         // new topic entry
                         newTopicsArray.push({
                             topic_name: sessionFileObject.topicName,
+                            topic_id: sessionFileObject.topicName,
                             isUploaded: true,
                             file_data: {
                                 bucketname: sessionFileObject.bucketname,
@@ -267,7 +270,7 @@ export class SessionsUtilityService {
                     }
                     // verify if all the topics are updated
                     let allUploaded = false;
-                    if (newTopicsArray.length === 3) {
+                    if (newTopicsArray.length === fetchedSession['topics_limit']) {
                         if (!newTopicsArray.filter(topic => topic.isUploaded === false).length) {
                             // all topics have there files, set global uploaded status to true
                             console.log('detected all topics having there respective cloud files');
@@ -277,7 +280,6 @@ export class SessionsUtilityService {
                     // all data has been modified
                     console.log('final updation object"s topics looks like ');
                     console.log(newTopicsArray);
-                    /* sessionFileResolve({ok: true}); */
                     this.SessionModel.updateOne(
                         {
                         username: sessionFileObject.username,
@@ -364,17 +366,12 @@ export class SessionsUtilityService {
             finalObj['topics'] = [];
             for (const topic of session.topics) {
                 finalObj['topics'].push({
-                    name: topic.topic_name, 
-                    isUploaded: topic.isUploaded, 
+                    name: topic.topic_name,
+                    isUploaded: topic.isUploaded,
                     topic_id: topic.topic_id ?  topic.topic_id : null});
             }
             return finalObj;
         });
         return cleanedObjectData;
     }
-    /* updateUploadingSessionStatusToDB(sessionObject, username) {
-        this.SessionModel.find({username}).then(sessionDoc => {
-
-        });
-    } */
 }
