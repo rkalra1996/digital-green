@@ -15,12 +15,14 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
 // importing environments
 // import {ConfigModule, ConfigService} from '@nestjs/config';
 import {env as ENV} from 'process';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
     // ConfigModule.forRoot({isGlobal: true}),
+    HealthModule,
     AuthModule,
-    MongooseModule.forRoot(ENV.DB_HOST, {useNewUrlParser: true, useUnifiedTopology: true, reconnectTries: 2}),
+    MongooseModule.forRoot(ENV.DB_HOST, {useNewUrlParser: true, useUnifiedTopology: true}),
     UsersModule,
     SessionsModule,
     WebhooksModule],

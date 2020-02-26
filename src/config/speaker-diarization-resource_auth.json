@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "speaker-diarization-resource",
+  "private_key_id": "53072b0e1c49d45905aae067eed09b931764ba48",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCqUgr/VRUYkUJ7\nMZsARWk9DvNX7JoBwGSuBgi/ur83FfOJK//h1OZAFtHKcYWPBqeBphdi7DY2lTTG\nHj2owgsk/oCRWFaYJBtloMdww2pcgf+lxJ6SLsmrlATKrnIbKn4YiSsn1C+JMg31\nrOrUKRvF6EqlJTL2a5QiL6a7UiQnKfq+PSIH+qeA3+trWMrpZbIKfdpBGRKZ9mph\nE+AAzEM9DdjVmPO4ugTv0rlXIku3ihbYO0dnl7UlrFxNst3mBXEkvwdL4/c8tMgQ\nkPAZzk2GSK0us8YH3M4A08ukj76vjAmSCFGl8/P39vkR0BWupPYH6llyGwllZf1+\nnL+f92phAgMBAAECggEAALUhCxD/KrA1yr24w15GcuS8QY3/0MiMEoX/ZM6Bi1jJ\nv3Thlf5Uq4j8u57Pm3m/WeRG/hf1nLHve3A2ONx/f9qXzaLEj1K9E2XA1ljVeQdo\nOLfRodFUcKRHhdEGM9MwHWl6dqqkvOjqkm3ytslp7l9J6hg2tzvYrHCuvGH5uPjr\nr8Bjh/QdX+WpByA4N5kSu2V4U3vFAjAasdTKiNvasktSd/SHaNwhPbI6ToQJ/m2a\nXFdlMBJ18iIe36ij20CWpgUdTnXzf6/Pe1pbtjp5cE7ehr0MXCP2vUL+SiEAC2St\nHB4m1GJ95PKpxK3a3UuVxp2BgKryYw35kwCDuKQTsQKBgQDVbGKxGmfkzx2Yvljs\nhsJYOF0bHiFdnEAn8tNJcZPGafNP/9LkWn5ShpaVToXQK1xDJ8ozsdSrxExQEqrx\nvaB3uaWgKKEuL5nthP97psRNiSHBd8hjuHax8gRNUrK8/P28uS3wBkw6SR5z72N1\nyV4Jm9Dc6C6Uqiz8MrT7nzolaQKBgQDMTGArfj6HcYzLtP6bFueu8p0g+Qij3s+F\n9W9+rPHphq+P3JfgdP+oOzBiVdymXNZXYqAQr0Ztq5juHO2UVv3eSEujPzpcUMBs\n2Fqe6sD39zh45Sjhx7CB3qLHyMaC2wROc4YJq5O3Y5EWj56nvz3seA8IPzdk+tLc\nLQbSMkumOQKBgQC163BolCCRCfapdz8nRmssdcbvUYyRVZneM37kcJrNGwzaWS8z\nlOtufuimlks7uWoomCckT2X/kBCYhIEQFFpPE4DZdyiEzPCBZMe9Z9aWXNjYJ7k5\nP0h1v9zo6CARNfk3QAWnPkcFu8PogNqf0SiGOjobwxHJiRFVXAenH/+ZWQKBgQCt\nCb+m9w3VQKsFWy8Pg04HEz1dUTEtQyo4h1LBU5CuwEJxMmF9XvuvrTpk/96dFiMB\n7uouV5bqix5ECEJ+k1QBcvCFu6cdy9PAHVxcH/AD1uSBGXAQFEf/J+huGTNyYDl8\njUKpbCb4fJ/GIS07XbMAWAw7avfrUrtIe+a8IJeMmQKBgAQQ+xvJnp2lFEb6Unok\n/Zt4BOsRSyA9Ow3/kcKh+thAv330OFE7oaXBjIX7bq3+N7kHQ69P1Cx6hLKHsPf0\ndw3kws5zydr5HbCTnsaJ6i9CETh5FyeSaBm1KIaJw7bcnaJrFdvuxfzERTJcZDUj\ntp2H8C47LvL1lsQLUOrEHxOQ\n-----END PRIVATE KEY-----\n",
+  "client_email": "speaker-diarization-iam@speaker-diarization-resource.iam.gserviceaccount.com",
+  "client_id": "104586141957674492496",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/speaker-diarization-iam%40speaker-diarization-resource.iam.gserviceaccount.com"
+}
