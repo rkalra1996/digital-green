@@ -24,4 +24,20 @@ export class UserService {
         return Promise.resolve({ok: isUser['ok'], status: isUser['status'], error: isUser['error']});
       }
     }
+
+    async register(requestBody) {
+      const newUsers = this.userUSrvc.validateAndParseNewUsers(requestBody);
+      if (newUsers['ok']) {
+        // newUsers contains the batch of users present
+        const isCreated = await this.userUSrvc.registerUsers(newUsers['users']);
+        if (isCreated['ok']) {
+          return Promise.resolve({ok: true, data: isCreated['users']});
+        } else {
+          return Promise.resolve({ok: false, status: (isCreated['status'] || 500), error: isCreated['error']});
+        }
+      } else {
+        console.log('error validating users ', newUsers['error']);
+        return Promise.resolve({ok: false, status: newUsers['status'], error: newUsers['error']});
+      }
+    }
 }
