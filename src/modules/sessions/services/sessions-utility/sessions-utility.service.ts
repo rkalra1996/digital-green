@@ -291,7 +291,7 @@ export class SessionsUtilityService {
                         ).then(updatedDoc => {
                             console.log('updated doc now looks like ');
                             console.log(updatedDoc);
-                            sessionFileResolve({ok: true});
+                            sessionFileResolve({ok: true, data: sessionFileObject});
                         }).catch(updationError => {
                             console.log(updationError);
                             sessionFileReject({ok: false, error: 'An Error occured while updating the database document'});

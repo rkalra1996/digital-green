@@ -1,19 +1,26 @@
 import { Injectable } from '@nestjs/common';
-import {resolve as pathResolve, join as pathJoin} from 'path';
+import {resolve as pathResolve} from 'path';
 import {lstatSync, readdir} from 'fs';
 
-import {Storage} from '@google-cloud/storage';
+import {env as ENV} from 'process';
+import { SpeechToTextService } from '../speech-to-text/speech-to-text.service';
+import { LanguageTranslationService } from '../language-translation/language-translation.service';
+import { SentimentAnalysisService } from '../sentiment-analysis/sentiment-analysis.service';
+import { GoogleCloudSdkService } from '../google-cloud-sdk/google-cloud-sdk.service';
 
 @Injectable()
 export class GcloudService {
     private _DEFAULT_BUCKET_NAME: string;
-    private storage = new Storage({
-        keyFilename: pathJoin(__dirname, '../../../../../src/config/fine-harbor_auth.json'),
-        projectId: 'fine-harbor-258106',
-    });
+    private storage;
 
-    constructor() {
-        this._DEFAULT_BUCKET_NAME = 'app-blob-storage';
+    constructor(
+        private readonly gcloudSDK: GoogleCloudSdkService,
+        private readonly sttSrvc: SpeechToTextService,
+        private readonly ltSrvc: LanguageTranslationService,
+        private readonly saSrvc: SentimentAnalysisService,
+        ) {
+        this._DEFAULT_BUCKET_NAME = ENV.DG_GOOGLE_APP_STORAGE;
+        this.storage = this.gcloudSDK.getStorageInstance;
     }
 
     uploadFilesToGCloud(parentFolderAddrObject, bucketName?: string, cloudFilePath?: string): Promise<any> {
@@ -84,5 +91,25 @@ export class GcloudService {
                 reject(null);
             });
         });
+    }
+
+    async startSpeechToTextConversion(dataObj): Promise<object> {
+        console.log('starting speech to text conversion with info ', dataObj);
+        const s2tResult = await this.sttSrvc.initiate(dataObj);
+        if (s2tResult['ok']) {
+            return Promise.resolve({ok: true, data: s2tResult['data']});
+        } else {
+            return Promise.reject({ok: false, status: 500,  error: 'An Error occured while completing s', data: {}});
+        }
+    }
+
+    startLanguageTranslation() {
+        console.log('starting language translation');
+        this.ltSrvc.initiate({});
+    }
+
+    startSentimentAnalysis() {
+        console.log('starting sentiment analysis');
+        this.saSrvc.initiate({});
     }
 }

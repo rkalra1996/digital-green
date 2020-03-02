@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { SessionsUtilityService } from '../../../sessions/services/sessions-utility/sessions-utility.service';
+import { PipelineCoreService } from './../../../pipeline/services/pipeline-core/pipeline-core.service';
 
 @Injectable()
 export class GoogleCloudWebhookHandlerService {
 
-    constructor(private readonly sessionUtilitySrvc: SessionsUtilityService) {}
+    constructor(
+        private readonly sessionUtilitySrvc: SessionsUtilityService,
+        private readonly pipelineSrvc: PipelineCoreService,
+        ) {}
 
     handleWebhookEvent(webhookData): Promise<object> {
         return new Promise((resolve, reject) => {
@@ -15,6 +19,8 @@ export class GoogleCloudWebhookHandlerService {
             .then(response => {
                 console.log('file record updated in the session collection successfully');
                 resolve({ok: true});
+                // start the pipeline
+                this.pipelineSrvc.initiate(response.data);
             })
             .catch(error => {
                 console.log(error['error']);
