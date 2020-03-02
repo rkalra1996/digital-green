@@ -18,7 +18,7 @@ export class PipelineCoreService {
             // start language translation sequence
         })
         .catch(s2tErr => {
-            console.log('Error occured while completing Sppech to Text Sequence', s2tErr);
+            console.log(s2tErr['error']);
         });
     }
 }

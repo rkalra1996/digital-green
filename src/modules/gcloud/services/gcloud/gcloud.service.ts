@@ -99,7 +99,7 @@ export class GcloudService {
         if (s2tResult['ok']) {
             return Promise.resolve({ok: true, data: s2tResult['data']});
         } else {
-            return Promise.reject({ok: false, status: 500,  error: 'An Error occured while completing s', data: {}});
+            return Promise.reject({ok: false, status: 500,  error: 'An Error occured while completing speech to text sequence'});
         }
     }
 
