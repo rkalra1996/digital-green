@@ -16,8 +16,18 @@ export class PipelineCoreService {
         .then(s2tRes => {
             console.log('recieved response from s2t sequence ', s2tRes);
             // start language translation sequence
+            this.gcloudCore.startLanguageTranslation(s2tRes['data'])
+            .then(ltRes => {
+                console.log('recieved response from language translation sequence', JSON.stringify(ltRes));
+                console.log('pipeline finished successfully');
+            })
+            .catch(ltErr => {
+                console.log('error detected in language translation sequence');
+                console.log(ltErr['error']);
+            });
         })
         .catch(s2tErr => {
+            console.log('error detected in speech to text sequence');
             console.log(s2tErr['error']);
         });
     }

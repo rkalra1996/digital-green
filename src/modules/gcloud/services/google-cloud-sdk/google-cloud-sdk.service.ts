@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { v1p1beta1 } from '@google-cloud/speech';
 import {Storage} from '@google-cloud/storage';
+import Translate from '@google-cloud/translate';
 import * as path from 'path';
 
 import {env as ENV} from 'process';
@@ -20,5 +21,9 @@ export class GoogleCloudSdkService {
 
     get getStorageInstance() {
         return new Storage(this.config);
+    }
+
+    get getTranslationInstance() {
+        return new Translate.v2.Translate(this.config);
     }
 }

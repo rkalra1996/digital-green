@@ -103,9 +103,14 @@ export class GcloudService {
         }
     }
 
-    startLanguageTranslation() {
-        console.log('starting language translation');
-        this.ltSrvc.initiate({});
+    async startLanguageTranslation(dataObj): Promise<object> {
+        console.log('starting language translation with data ', dataObj);
+        const ltResult = await this.ltSrvc.initiate(dataObj);
+        if (ltResult['ok']) {
+            return Promise.resolve({ok: true, data: ltResult['data']});
+        } else {
+            return Promise.reject({ok: false, status: 500,  error: 'An Error occured while completing language translation sequence'});
+        }
     }
 
     startSentimentAnalysis() {
