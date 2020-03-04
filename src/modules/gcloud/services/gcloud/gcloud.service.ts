@@ -107,11 +107,25 @@ export class GcloudService {
 
     async startLanguageTranslation(dataObj): Promise<object> {
         console.log('starting language translation with data ', dataObj);
-        const ltResult = await this.ltSrvc.initiate(dataObj);
-        if (ltResult['ok']) {
-            return Promise.resolve({ok: true, data: ltResult['data']});
+        if (dataObj['speech_to_text_status'] === 'DONE') {
+            console.log('speech to text data detected, proceeding to language translation');
+            const ltResult = await this.ltSrvc.initiate(dataObj);
+            if (ltResult['ok']) {
+                return Promise.resolve({ok: true, data: ltResult['data']});
+            } else {
+                const errorData = {
+                    username: dataObj['username'],
+                    session_id: dataObj['session_id'],
+                    topic_name: dataObj['topic_name'],
+                };
+                console.log('sending error data as ', errorData);
+                // tslint:disable-next-line: max-line-length
+                return Promise.reject({ok: false, status: 500,  error: 'An Error occured while completing language translation sequence', data: errorData});
+            }
         } else {
-            return Promise.reject({ok: false, status: 500,  error: 'An Error occured while completing language translation sequence'});
+            // tslint:disable-next-line: max-line-length
+            console.log(`speech_to_text_status is not DONE, it is ${dataObj['speech_to_text_status']} cannot proceed to language translation sequence`);
+            return Promise.reject({ok: false, status: 503,  error: 'Speech To Text did not completed successfully, ABORTING THE PIPELINE'});
         }
     }
 
