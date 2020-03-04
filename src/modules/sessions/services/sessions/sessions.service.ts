@@ -66,6 +66,12 @@ export class SessionsService {
             }
         }
 
+        /**
+         * Initiates upload. An auto upload trigger which will upload the session files to cloud storage
+         * @param sessionObject
+         * @param [cloudType] (defaults to GCLOUD_STORAGE)
+         * @returns Promise as soon as the file is saved locally and readyy for upload
+         */
         initiateUpload(sessionObject, cloudType= this.GCLOUD_STORAGE): Promise<any> {
             return new Promise(async (resolve, reject) => {
                 if (cloudType === this.GCLOUD_STORAGE) {
@@ -84,8 +90,8 @@ export class SessionsService {
                     // filesSaved will have parentFolder path
                     if (filesSaved['ok']) {
                         resolve(true);
-                        // tslint:disable-next-line: max-line-length
                         console.log('session object looks like ', sessionObject);
+                        // tslint:disable-next-line: max-line-length
                         const isMonoConverted = await this.sessionsUtilitySrvc.convertTempFilesToMono(username, sessionObject[username]['sessionid'], sessionObject[username]['topics'][0]['name']);
                         if (isMonoConverted['ok']) {
                             // send the saved path to uploader
@@ -99,13 +105,6 @@ export class SessionsService {
                                 monoFileNames,
                                 ).then(uploadedToCloud => {
                                 console.log('process uploading to gcloud triggered successfully', uploadedToCloud);
-                                // update the status of uploading  topics in the database
-                                /* this.sessionsUtilitySrvc.updateUploadingSessionStatusToDB(sessionObject, username).then((res) => {
-                                    console.log('updated uploading status to database');
-                                }).catch(e => {
-    console.log('error updating the uploading status to database for session ', sessionObject[username]['sessionid'] + ' of ' + username);
-                                    console.log(e);
-                                }); */
                             })
                             .catch(error => {
                                 console.log('An Error occured while triggering upload to gcloud ', error);
@@ -118,11 +117,16 @@ export class SessionsService {
             });
         }
 
+    /**
+     * Gets user sessions status. The function will perform a session model lookup to give you the session list and its upload status on
+     * bases of username provided
+     * @param username
+     * @returns session status object
+     */
     async getUserSessionsStatus(username) {
         const sessionsData = await this.sessionsUtilitySrvc.getSessionsStatus(username);
         if (sessionsData['ok']) {
-            const finalResponseObject = this.sessionsUtilitySrvc.formatObject(sessionsData);
-            // console.log(finalResponseObject);
+            const finalResponseObject = this.sessionsUtilitySrvc.formatObject(sessionsData as object);
             return {ok: true, data: finalResponseObject};
         } else {
             return {ok: false, error: sessionsData['error']};

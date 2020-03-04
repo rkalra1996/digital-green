@@ -19,20 +19,14 @@ export class PipelineUtilityService {
      */
     updateSessionInDB(userInfoObj, dataToAdd) {
         return new Promise((res, rej) => {
-            console.log('userdetails recieved are ', userInfoObj);
-            console.log('data to add in session model are ', dataToAdd);
             const sessionId = userInfoObj['session_id'] || null;
             if (sessionId) {
                 console.log('saving data for session id ', sessionId);
                 this.SessionModel.findOne({session_id: sessionId}).then(data => {
-                    console.log('recieved data from findOne', data);
                     const selectedTopicIdx = data['topics'].findIndex(topic => topic['topic_name'] === userInfoObj['topic_name']);
                     if (selectedTopicIdx > -1) {
-                        console.log('adding new data to topic ', data['topics'][selectedTopicIdx]);
                         const newTopic = {...data['topics'][selectedTopicIdx], ...dataToAdd};
-                        console.log('updated topic looks like ', newTopic);
                         data['topics'][selectedTopicIdx] = newTopic;
-                        console.log('final data looks like ', data);
                         this.SessionModel.updateOne({session_id: sessionId}, {topics : data['topics']})
                         .then(updateRes => {
                             console.log('update res ', updateRes);
@@ -41,7 +35,7 @@ export class PipelineUtilityService {
                         .catch(updateErr => {
                             console.log('update Error', updateErr);
                             rej('An error occured while saving the updated topic details');
-                        })
+                        });
                     } else {
                         console.log('did not find the topic which needs to be updated');
                     }
@@ -52,8 +46,6 @@ export class PipelineUtilityService {
             } else {
                 rej('session id not available inside user object while updating in sessionDB');
             }
-            res(true);
         });
-
     }
 }

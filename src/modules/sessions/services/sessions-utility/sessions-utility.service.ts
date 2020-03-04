@@ -43,6 +43,11 @@ export class SessionsUtilityService {
         });
     }
 
+    /**
+     * Validates session object
+     * @param sessionData
+     * @returns true if session object validates properly
+     */
     validateSessionObject(sessionData): boolean {
         if (
             !sessionData ||
@@ -62,6 +67,11 @@ export class SessionsUtilityService {
             }
     }
 
+    /**
+     * Validates session body provided in the request
+     * @param body
+     * @returns object having ok key set to true if body is validated else ok is set to false with specific error in error key
+     */
     async validateSessionBody(body: object): Promise<object> {
         if (body && body.constructor === Object) {
             if (Object.keys(body).length > 0) {
@@ -97,6 +107,12 @@ export class SessionsUtilityService {
         }
     }
 
+    /**
+     * Creates user sessions in batch. This function creates a new session / sessions in database.
+     * [NOTE] : For simplicity, the function currently performs single session insert at a time
+     * @param sessions Array (currently one session object in the array)
+     * @returns session object that has been created
+     */
     async createUserSessionsInBatch(sessions) {
         return new Promise((resolve, reject) => {
             console.log('inserting ', sessions);
@@ -132,15 +148,6 @@ export class SessionsUtilityService {
                     console.log('error while reading an existing session', sessionReadErr);
                     resolve(null);
                 });
-                /* this.SessionModel.insertMany([...sessions])
-            .then(isInserted => {
-                console.log('inserted ', isInserted);
-                resolve(isInserted);
-            })
-            .catch(insertErr => {
-                console.log('insert Error', insertErr);
-                resolve(null);
-            }); */
             }
         });
     }
@@ -155,12 +162,12 @@ export class SessionsUtilityService {
             return new Promise((resolve, reject) => {
                 try {
                     files.forEach(file => {
-                        // writeFileSync(file.originalname, file.buffer);
                         const info = file.originalname.split('_');
                         // storing username
-                        const username = info[0];
-                        const sessionid = info[1];
-                        const topicname = info[2].split('.wav')[0];
+                        const [username, sessionid, topicName] = info;
+                        // const username = info[0];
+                        // const sessionid = info[1];
+                        const topicname = topicName.split('.wav')[0];
                         if (sessionDetailsObject.hasOwnProperty(username)) {
                             // append to the user object
                             const fileObj = {...file};
@@ -186,6 +193,14 @@ export class SessionsUtilityService {
             });
         }
 
+    /**
+     * Uploads files to cloud storage. This is the core function which uploads the files to the google cloud storage
+     * @param username
+     * @param sessionID
+     * @param [parentSourceAddress] If you provide parent folder address and not filenames, it will upload all the files from the parent folder
+     * @param [fileNames] If you provide filenames along with parentSourceAddress, it will upload those specific files from the parent folder
+     * @returns  Pending promise which contains the trigger to cloud
+     */
     uploadFilesToCloudStorage(username, sessionID, parentSourceAddress?: string, fileNames?: any[]) {
         if (!parentSourceAddress) {
             parentSourceAddress = resolve(this.pathResolver.paths.TEMP_STORE_PATH);
@@ -212,6 +227,13 @@ export class SessionsUtilityService {
         return this.gcloudSrvc.uploadFilesToGCloud(addressObject, undefined, cloudDestinationDir);
     }
 
+    /**
+     * Converts temp files to mono. The driver function which trigger ffmpeg for converting the files to mono
+     * @param username
+     * @param sessionID
+     * @param topicID
+     * @returns  Promise<object>
+     */
     convertTempFilesToMono(username, sessionID, topicID) {
         return new Promise((monoResolve, monoReject) => {
             const parentFolderAddr = resolve(this.pathResolver.paths.TEMP_STORE_PATH, username, sessionID);
@@ -225,6 +247,11 @@ export class SessionsUtilityService {
         });
     }
 
+    /**
+     * Updates session file status. This function is responsible for updating the session db using the details provided.
+     * @param sessionFileObject
+     * @returns Promise<object>
+     */
     updateSessionFileStatus(sessionFileObject): Promise<any> {
         console.log('updating session file status in database');
         return new Promise(async (sessionFileResolve, sessionFileReject) => {
@@ -307,7 +334,13 @@ export class SessionsUtilityService {
         });
     }
 
-    getSessionBySessionID(username, sessionID): Promise<any> {
+    /**
+     * Gets session by session id. This function gets session informantion using sessionID
+     * @param username
+     * @param sessionID
+     * @returns object containing ok key and error key specifying the error
+     */
+    getSessionBySessionID(username: string, sessionID: string): Promise<any> {
         return new Promise((getSessionResolve, getSessionReject) => {
             console.log('finding user ', username + ' with session id ' + sessionID);
             this.SessionModel.findOne({
@@ -328,7 +361,12 @@ export class SessionsUtilityService {
         });
     }
 
-    checkUsername(usernameToValidate) {
+    /**
+     * Checks username.Utility function which will look into the database and verify if the username provided is already present or not
+     * @param usernameToValidate
+     * @returns Promise<boolean>
+     */
+    checkUsername(usernameToValidate: string) {
         return new Promise((validresolve, reject) => {
             if (!usernameToValidate) {
                 validresolve(false);
@@ -338,7 +376,7 @@ export class SessionsUtilityService {
         });
     }
 
-    getSessionsStatus(username) {
+    getSessionsStatus(username: string) {
         return new Promise((resolve, reject) => {
             this.SessionModel.find({
                 username,
@@ -355,8 +393,13 @@ export class SessionsUtilityService {
         });
     }
 
-    formatObject(sessionObject) {
-        const cleanedObjectData = sessionObject.data.map(session => {
+    /**
+     * Formats object. It basically converts session object into a format which is properly consumable by session apis
+     * @param sessionObject
+     * @returns  foramtted object from session
+     */
+    formatObject(sessionObject: object) {
+        const cleanedObjectData = sessionObject['data'].map(session => {
             const finalObj = {
                 name: session.name,
                 session_id: session.session_id,

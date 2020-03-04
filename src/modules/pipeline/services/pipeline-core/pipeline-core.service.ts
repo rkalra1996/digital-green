@@ -28,10 +28,10 @@ export class PipelineCoreService {
                 this.gcloudCore.startLanguageTranslation(s2tRes['data'])
                     .then(ltRes => {
                         console.log('recieved response from language translation sequence', JSON.stringify(ltRes));
-                        console.log('pipeline finished successfully');
                         this.pipelineUtility.updateSessionInDB(ltRes['data'], {translated_result: ltRes['data']['translated_result']})
                             .then(translationUpdated => {
                                 console.log('updated language translation response in session DB ', translationUpdated);
+                                console.log('pipeline finished successfully');
                             });
                     })
                     .catch(ltErr => {
