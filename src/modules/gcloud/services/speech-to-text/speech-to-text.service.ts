@@ -52,4 +52,36 @@ export class SpeechToTextService {
         });
         return combinedS2T.join('');
     }
+
+    cleanResult(data) {
+        const cleanedS2T = this.cleanS2T(data['speech_to_text_result']);
+        return {...data, speech_to_text_result: cleanedS2T};
+    }
+
+    cleanS2T(objectArrayToClean) {
+        const cleanedArray = [];
+        objectArrayToClean.forEach(dataObj => {
+            const newObj = {
+                alternatives: this.cleanAlternatives(dataObj['alternatives']),
+                languageCode: dataObj['languageCode'],
+            };
+            cleanedArray.push(newObj);
+        });
+        return cleanedArray;
+    }
+
+    cleanAlternatives(alternativesArray) {
+        if (Array.isArray(alternativesArray) && alternativesArray.length > 0) {
+            const newAlternatives = [];
+            alternativesArray.forEach(altObj => {
+                newAlternatives.push({transcript: altObj.transcript, confidence: altObj.confidence});
+                // console.log('pushed ', {transcript: altObj.transcript, confidence: altObj.confidence});
+            });
+            // console.log('sending new alternatives in s2t as ', newAlternatives);
+            return newAlternatives;
+        } else {
+            console.log('new alternatives array is either empty or invalid array');
+            return [];
+        }
+    }
 }

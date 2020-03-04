@@ -97,7 +97,9 @@ export class GcloudService {
         console.log('starting speech to text conversion with info ', dataObj);
         const s2tResult = await this.sttSrvc.initiate(dataObj);
         if (s2tResult['ok']) {
-            return Promise.resolve({ok: true, data: s2tResult['data']});
+            // clean the result recieed and send it back
+            const cleanedResult = this.sttSrvc.cleanResult(s2tResult['data']);
+            return Promise.resolve({ok: true, data: cleanedResult});
         } else {
             return Promise.reject({ok: false, status: 500,  error: 'An Error occured while completing speech to text sequence'});
         }
