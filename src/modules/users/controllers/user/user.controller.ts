@@ -30,7 +30,7 @@ export class UserController {
         return response.status(200).send(loggedIn['data']);
     }
 
-    @Get('list')
+    @Post('list')
     async listAllUsers(@Res() response, @Body() body): Promise<any> {
         this.logger.info('GET /user/list hit');
         const users = await this.userService.readAllUsers(body);
