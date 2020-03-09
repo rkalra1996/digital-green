@@ -1,10 +1,14 @@
-import { Controller, Post, Body, Res } from '@nestjs/common';
+import { Controller, Post, Body, Res, Get, Inject } from '@nestjs/common';
 import { UserService } from '../../services/user/user.service';
+
+import {Logger} from 'winston';
 
 @Controller('user')
 export class UserController {
 
-    constructor(private readonly userService: UserService) {}
+    constructor(
+        @Inject('winston') private readonly logger: Logger,
+        private readonly userService: UserService) {}
 
     @Post('register')
     async registerUser(@Body() requestBody, @Res() response): Promise<any> {
@@ -24,5 +28,18 @@ export class UserController {
             return response.status(loggedIn['status']).send({status: loggedIn['status'], error: loggedIn['error']});
         }
         return response.status(200).send(loggedIn['data']);
+    }
+
+    @Get('list')
+    async listAllUsers(@Res() response, @Body() body): Promise<any> {
+        this.logger.info('GET /user/list hit');
+        const users = await this.userService.readAllUsers(body);
+        if (users['ok']) {
+            this.logger.info('sending abck users list as ' + JSON.stringify(users));
+            return response.status(200).send({status: 200, users: users['data']});
+        } else {
+            this.logger.error('detected err while reading allusers api' + JSON.stringify(users));
+            return response.status(users['status']).send({status: users['status'], error: users['error']});
+        }
     }
 }

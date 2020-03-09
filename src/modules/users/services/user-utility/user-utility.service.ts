@@ -1,12 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
 export type User = any;
+export type Users= any;
+
+import {Logger} from 'winston';
 
 @Injectable()
 export class UserUtilityService {
-    constructor(@InjectModel('User') private readonly UserModel: Model<User>) { }
+    constructor(
+        @Inject('winston') private readonly logger: Logger,
+        @InjectModel('User') private readonly UserModel: Model<User>,
+        @InjectModel('Users') private readonly UsersModel: Model<Users>,
+        ) { }
 
     async findUserByUsername(username: string): Promise<User | undefined> {
         return new Promise((resolve, reject) => {
@@ -137,6 +144,82 @@ export class UserUtilityService {
                     insertRes({ok: false, status: 500, error: 'Error occured while inserting users'});
                 }
             });
+        });
+    }
+
+    validateReadUserObj(userObj) {
+        return (userObj && userObj.constructor === Object && userObj.hasOwnProperty('username'));
+    }
+
+    validateReadAllUsersBody(userBody) {
+        if (userBody && userBody.constructor === Object && userBody.hasOwnProperty('users')) {
+            if (Array.isArray(userBody.users)) {
+                if (userBody.users.length > 0) {
+                    let invalidUserObjIdx = -1;
+                    userBody.users.every((userObj,i) => {
+                        const isvalidatedUserObj = this.validateReadUserObj(userObj);
+                        if (isvalidatedUserObj) {
+                            return true;
+                        } else {
+                            this.logger.error('Error while validating user ' + JSON.stringify(userObj));
+                            invalidUserObjIdx = i;
+                            return false;
+                        }
+                    });
+                    if (invalidUserObjIdx !== -1) {
+                        return {ok: false, status: 400, error: 'User object not valid at index ' + invalidUserObjIdx + '. Username key is must'};
+                    } else {
+                        return {ok: true};
+                    }
+                } else {
+                    return {ok: true};
+                }
+            } else {
+                // this will pass as user wants to read all
+                return {ok: false, status: 400, error: 'users key must contain atleast one user object with username key'};
+            }
+        } else {
+            return {ok: false, status: 400, error: 'body should be of type object and must contain an array key users'};
+        }
+    }
+
+    /**
+     * Parses user obj for read. It will simply return array of user objects, if any
+     * @param userObj
+     * @returns Array <empty | users>
+     */
+    parseUserObjForRead(userObj) {
+        if (userObj) {
+            return userObj['users'];
+        } else {
+            return [];
+        }
+    }
+
+    readUsersFromDB(usersArray) {
+        return new Promise((res, rej) => {
+            if (usersArray.length > 1) {
+                // const usernames = usersArray.map(userObj => userObj['username']);
+                this.UsersModel.find({
+                    $or: [...usersArray],
+                }).then(usersDocs => {
+                    res(usersDocs);
+                })
+                .catch(usersDocsErr => {
+                    this.logger.error('An error occured while reading users docs ' + usersDocsErr);
+                    rej('An error occured while reading users from DB');
+                });
+            } else {
+                // for only single user read
+                this.UserModel.find(usersArray[0])
+                .then(userDoc => {
+                    res(userDoc);
+                })
+                .catch(userReadErr => {
+                    this.logger.error('error while reading single user' + userReadErr);
+                    rej('An error occured while reading user from read api');
+                });
+            }
         });
     }
 }
