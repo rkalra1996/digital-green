@@ -11,7 +11,7 @@ async function bootstrap() {
   });
   // enable cors
   app.enableCors();
-  await app.listen(ENV.SERVER_PORT);
-  console.log('server up and running at port -> ', ENV.SERVER_PORT);
+  await app.listen(ENV.DG_SERVER_PORT);
+  console.log('server up and running at port -> ', ENV.DG_SERVER_PORT);
 }
 bootstrap();

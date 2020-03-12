@@ -7,7 +7,7 @@ import {env as ENV} from 'process';
 @Injectable()
 export class SessionsService {
     public GCLOUD_STORAGE = 'gcloud';
-    public GCLOUD_BUCKET = ENV.GOOGLE_APP_STORAGE;
+    public GCLOUD_BUCKET = ENV.DG_GOOGLE_APP_STORAGE;
 
     constructor(
         private readonly sessionsUtilitySrvc: SessionsUtilityService,

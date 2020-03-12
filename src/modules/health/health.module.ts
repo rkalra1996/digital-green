@@ -17,7 +17,7 @@ const getTerminusOptions = (
 
 @Module({
     imports: [
-        MongooseModule.forRoot(ENV.DB_HOST, {useNewUrlParser: true, useUnifiedTopology: true}),
+        MongooseModule.forRoot(ENV.DG_DB_HOST, {useNewUrlParser: true, useUnifiedTopology: true}),
         TerminusModule.forRootAsync({
           inject: [MongooseHealthIndicator],
           useFactory: getTerminusOptions,

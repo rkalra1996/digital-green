@@ -72,7 +72,7 @@ const errorStackFormat = winston.format(info => {
     // LoggerModule,
     HealthModule,
     AuthModule,
-    MongooseModule.forRoot(ENV.DB_HOST, {useNewUrlParser: true, useUnifiedTopology: true}),
+    MongooseModule.forRoot(ENV.DG_DB_HOST, {useNewUrlParser: true, useUnifiedTopology: true}),
     UsersModule,
     SessionsModule,
     WebhooksModule],
