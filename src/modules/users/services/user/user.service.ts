@@ -23,10 +23,11 @@ export class UserService {
       if (isUser['ok']) {
         // get the access token
         const tokenData = await this.authSrvc.login({username: isUser.user.username, sub: isUser.user.userId, email: isUser.user.email});
-        console.log('user ', username + ' logged in successfully');
+        this.logger.info('user ' + username + ' logged in successfully');
         return Promise.resolve({ok: true, data: tokenData});
       } else {
-        console.log('user ', username + ' login failed ---> ' + isUser['error']);
+        this.logger.info('user ' + username + ' login failed ---> ');
+        this.logger.error(isUser['error']);
         return Promise.resolve({ok: isUser['ok'], status: isUser['status'], error: isUser['error']});
       }
     }
@@ -42,7 +43,8 @@ export class UserService {
           return Promise.resolve({ok: false, status: (isCreated['status'] || 500), error: isCreated['error']});
         }
       } else {
-        console.log('error validating users ', newUsers['error']);
+        this.logger.info('error validating users ');
+        this.logger.error(newUsers['error']);
         return Promise.resolve({ok: false, status: newUsers['status'], error: newUsers['error']});
       }
     }
@@ -64,11 +66,13 @@ export class UserService {
             res({ok: true, data: userList});
           })
           .catch(UreadErr => {
-            this.logger.error('got error while reading users in user read api ' + UreadErr);
+            this.logger.info('got error while reading users in user read api ');
+            this.logger.error(UreadErr);
             res({ok: false, status: 500, error: UreadErr});
           });
         } else {
-          this.logger.error('validation error recorded while validating the user objects in user read api' + JSON.stringify(validated));
+          this.logger.info('validation error recorded while validating the user objects in user read api');
+          this.logger.error(JSON.stringify(validated));
           res({ok: false, status: validated['status'], error: validated['error']});
         }
       });

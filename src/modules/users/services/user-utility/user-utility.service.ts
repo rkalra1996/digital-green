@@ -27,7 +27,8 @@ export class UserUtilityService {
                 }
             })
             .catch(err => {
-                console.log('An error occured while retriving user for login', err);
+                this.logger.info('An error occured while retriving user for login');
+                this.logger.error(err);
                 resolve(null);
             });
         });
@@ -79,7 +80,7 @@ export class UserUtilityService {
     }
 
     getParsedNewUsers(userBody) {
-        console.log('parsing ', userBody);
+        this.logger.info('parsing ' + JSON.stringify(userBody));
         userBody.users = userBody.users.map(user => {
             if (!user.hasOwnProperty('name')) {
                 user['name'] = user.username;
@@ -106,7 +107,8 @@ export class UserUtilityService {
                         userBody.users.every((newUserObject,index) => {
                             const response = this.validateNewUser(newUserObject);
                             if (!response['ok']) {
-                                console.log('validation failed for some new user', newUserObject);
+                                this.logger.error('validation failed for some new user');
+                                this.logger.error(JSON.stringify(newUserObject));
                                 throw new Error(response['error'] + '@@' + index);
                             }
                             return response;
@@ -128,19 +130,20 @@ export class UserUtilityService {
     }
 
     async registerUsers(newUsers) {
-        console.log('going to register ', newUsers);
+        this.logger.info('going to register ' + JSON.stringify(newUsers));
         return new Promise((insertRes, insertRej) => {
             this.UserModel.insertMany(newUsers)
             .then(inserted => {
-                console.log('new users inserted ', inserted);
+                this.logger.info('new users inserted ' + JSON.stringify(inserted));
                 insertRes({ok: true, users: inserted});
             })
             .catch(insertErr => {
                 if (insertErr.code.toString() === '11000' && insertErr.name.toString().toLowerCase() === 'bulkwriteerror') {
-                    console.log('duplicae user insert error');
+                    this.logger.error('duplicae user insert error. One or more users are already registered with same username');
                     insertRes({ok: false, status: 400, error: 'Error occured while inserting users. One or more users are already registered with same username'});
                 } else {
-                    console.log('An error detected while inserting users', insertErr);
+                    this.logger.info('An error detected while inserting users');
+                    this.logger.error(insertErr);
                     insertRes({ok: false, status: 500, error: 'Error occured while inserting users'});
                 }
             });

@@ -1,8 +1,9 @@
-import { Controller, Post, Body, Res, UseGuards, Param, UseInterceptors, UploadedFiles, Get } from '@nestjs/common';
+import { Controller, Post, Body, Res, UseGuards, Param, UseInterceptors, UploadedFiles, Get, Inject } from '@nestjs/common';
 import { SessionsService } from '../../services/sessions/sessions.service';
 import { SessionsUtilityService } from '../../services/sessions-utility/sessions-utility.service';
 import { AuthGuard } from '@nestjs/passport';
 import {FilesInterceptor} from '@nestjs/platform-express';
+import { Logger } from 'winston';
 
 // jwt protected controller - All routes must have jwt bearer token to work with
 @UseGuards(AuthGuard('jwt'))
@@ -10,13 +11,14 @@ import {FilesInterceptor} from '@nestjs/platform-express';
 export class SessionsController {
 
     constructor(
+        @Inject('winston') private readonly logger: Logger,
         private readonly sessionsSrvc: SessionsService,
         private readonly sessionsUSrvc: SessionsUtilityService,
         ) {}
 
     @Post('read')
     async getSessions(@Body() requestBody, @Res() response): Promise<any> {
-        console.log('POST sessions/read');
+        this.logger.info('POST sessions/read');
         const getSessions = await this.sessionsSrvc.getUserSessions(requestBody.username);
         if (getSessions['ok']) {
             return response.status(200).send({status: 200, data: getSessions['data']});
@@ -26,7 +28,7 @@ export class SessionsController {
 
     @Post('create')
     async createSessions(@Body() requestBody, @Res() response): Promise<any> {
-        console.log('POST sessions/create');
+        this.logger.info('POST sessions/create');
         // validate the request body
         const isBodyValid = await this.sessionsUSrvc.validateSessionBody(requestBody);
         if (isBodyValid['ok']) {
@@ -43,9 +45,9 @@ export class SessionsController {
     @Post('upload')
     @UseInterceptors(FilesInterceptor('session_recordings'))
     async uploadSessionToCloud(@Res() response , @Param() params, @UploadedFiles() sessionRawFiles, @Body() requestBody): Promise<any> {
-        console.log('POST /sessions/upload');
-        console.log(sessionRawFiles);
-        console.log(requestBody);
+        this.logger.info('POST /sessions/upload');
+        this.logger.info('raw files are ', + JSON.stringify(sessionRawFiles));
+        this.logger.info('request body ' + JSON.stringify(requestBody));
         const sessionDetailsObject = await this.sessionsUSrvc.getSessionDetailsObject(sessionRawFiles);
         if (!sessionDetailsObject) {
             return response.status(500).send({status: 500, error: 'An error occured while collecting files for upload, try again later'});
@@ -53,19 +55,20 @@ export class SessionsController {
         // sessionDetails are ready, initiate upload
         this.sessionsSrvc.initiateUpload(sessionDetailsObject)
         .then(sessionUploaded => {
-            console.log('Session uploaded started successfully');
+            this.logger.info('Session uploaded started successfully');
         })
         .catch(sessionUploadError => {
-            console.log('An error occured while complete session upload');
+            this.logger.info('An error occured while complete session upload');
+            this.logger.error(sessionUploadError);
         });
         return response.status(200).send({status: 200, message: 'Upload procedure started successfully'});
     }
 
     @Get('status/:username')
     async getSessionsStatus(@Res() response, @Param() params): Promise<any> {
-        console.log(`GET sessions/status/${params.username}`);
+        this.logger.info(`GET sessions/status/${params.username}`);
         if (await this.sessionsUSrvc.checkUsername(params.username)) {
-            console.log('user exists');
+            this.logger.info('user exists');
             const sessionStatus = await this.sessionsSrvc.getUserSessionsStatus(params.username);
             if (sessionStatus['ok']) {
                 return response.status(200).send({status: 200, data: sessionStatus['data']});
@@ -73,7 +76,7 @@ export class SessionsController {
                 return response.status(sessionStatus['status']).send({status: sessionStatus['status'], error: sessionStatus['error']});
             }
         } else {
-            console.log('user does not exist');
+            this.logger.info('user does not exist');
             return response.status(400).send({status: 400, error: `Username ${params.username} is undefined or does not exists`});
         }
     }

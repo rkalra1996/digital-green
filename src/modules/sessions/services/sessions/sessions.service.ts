@@ -1,15 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { SessionsUtilityService } from '../sessions-utility/sessions-utility.service';
 import { UserUtilityService } from './../../../users/services/user-utility/user-utility.service';
 import { SharedService } from './../../../../services/shared/shared.service';
 
 import {env as ENV} from 'process';
+import { Logger } from 'winston';
 @Injectable()
 export class SessionsService {
     public GCLOUD_STORAGE = 'gcloud';
     public GCLOUD_BUCKET = ENV.DG_GOOGLE_APP_STORAGE;
 
     constructor(
+        @Inject('winston') private readonly logger: Logger,
         private readonly sessionsUtilitySrvc: SessionsUtilityService,
         private readonly userUtilitySrvc: UserUtilityService,
         private readonly sharedSrvc: SharedService,
@@ -75,7 +77,7 @@ export class SessionsService {
         initiateUpload(sessionObject, cloudType= this.GCLOUD_STORAGE): Promise<any> {
             return new Promise(async (resolve, reject) => {
                 if (cloudType === this.GCLOUD_STORAGE) {
-                    console.log('initiating gcloud upload sequence\n');
+                    this.logger.info('initiating gcloud upload sequence\n');
                     // save the files in disk temporarely
                     const username = Object.keys(sessionObject)[0];
                     // const fileDataToSave = sessionObject
@@ -90,7 +92,13 @@ export class SessionsService {
                     // filesSaved will have parentFolder path
                     if (filesSaved['ok']) {
                         resolve(true);
-                        console.log('session object looks like ', sessionObject);
+                        this.logger.info('session object looks like ');
+                        this.logger.info(JSON.stringify({
+                            originalname: sessionObject[username]['topics'][0]['fileData']['originalname'],
+                            encoding: sessionObject[username]['topics'][0]['fileData']['encoding'],
+                            mimetype: sessionObject[username]['topics'][0]['fileData']['mimetype'],
+                            size: sessionObject[username]['topics'][0]['fileData']['size']
+                        }));
                         // tslint:disable-next-line: max-line-length
                         const isMonoConverted = await this.sessionsUtilitySrvc.convertTempFilesToMono(username, sessionObject[username]['sessionid'], sessionObject[username]['topics'][0]['name']);
                         if (isMonoConverted['ok']) {
@@ -104,13 +112,16 @@ export class SessionsService {
                                 undefined,
                                 monoFileNames,
                                 ).then(uploadedToCloud => {
-                                console.log('process uploading to gcloud triggered successfully', uploadedToCloud);
+                                    this.logger.info('process uploading to gcloud triggered successfully' + uploadedToCloud);
                             })
                             .catch(error => {
-                                console.log('An Error occured while triggering upload to gcloud ', error);
+                                this.logger.info('An Error occured while triggering upload to gcloud ');
+                                this.logger.error(error);
                             });
                         }
                     } else {
+                        this.logger.info('error detected while saving files ');
+                        this.logger.error(filesSaved['error']);
                         reject(filesSaved['error']);
                     }
                 }
@@ -129,6 +140,8 @@ export class SessionsService {
             const finalResponseObject = this.sessionsUtilitySrvc.formatObject(sessionsData as object);
             return {ok: true, data: finalResponseObject};
         } else {
+            this.logger.info('returning back error from getUserSessionsStatus');
+            this.logger.error(sessionsData['error']);
             return {ok: false, error: sessionsData['error']};
         }
     }

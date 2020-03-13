@@ -1,12 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { PathResolverService } from '../path-resolver/path-resolver.service';
 import * as path from 'path';
 import { writeFileSync, existsSync, mkdirSync, writeFile } from 'fs';
 import {homedir} from 'os';
+import { Logger } from 'winston';
 
 @Injectable()
 export class SharedService {
-    constructor(private readonly pathResolver: PathResolverService) {}
+    constructor(
+        @Inject('winston') private readonly logger: Logger,
+        private readonly pathResolver: PathResolverService) {}
 
     createNewFolders(folderCompletePath) {
         try {
@@ -19,11 +22,11 @@ export class SharedService {
                 }
             });
             // all folders created
-            console.log('created ', partialPaths);
+            this.logger.info('created ' + partialPaths);
             return true;
         } catch (e) {
-            console.log('error while creating new folders');
-            console.log(e);
+            this.logger.error('error while creating new folders');
+            this.logger.error(e);
             return false;
         }
     }
@@ -33,7 +36,7 @@ export class SharedService {
         if (this.createNewFolders(parentFolderAddr)) {
             // folders have been created, now save these files
             dataToSave.forEach((dataObj) => {
-                console.log('writing file ', dataObj);
+                this.logger.info('writing file ' + dataObj['filename']);
                 writeFileSync(path.resolve(parentFolderAddr, dataObj.filename), dataObj.data);
             });
         }

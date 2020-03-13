@@ -1,14 +1,16 @@
 // tslint:disable: max-line-length
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { GoogleCloudSdkService } from '../google-cloud-sdk/google-cloud-sdk.service';
-import { networkInterfaces } from 'os';
+import { Logger } from 'winston';
 
 @Injectable()
 export class LanguageTranslationService {
 
     private translator;
 
-    constructor(private readonly gcloudSDK: GoogleCloudSdkService) {
+    constructor(
+        @Inject('winston') private readonly logger: Logger,
+        private readonly gcloudSDK: GoogleCloudSdkService) {
         this.translator = this.gcloudSDK.getTranslationInstance;
     }
     updateTranslation(translationsPromises) {
@@ -17,12 +19,13 @@ export class LanguageTranslationService {
             return allTranslationRes;
         })
         .catch(allTranslationErr => {
-            console.log('An error occured while capturing all translations for a particular audio', allTranslationErr);
+            this.logger.error('An error occured while capturing all translations for a particular audio');
+            this.logger.error(allTranslationErr);
         });
     }
 
     cleanMergedData(dataToClean) {
-        console.log('data recieved to clean is', dataToClean);
+        this.logger.info(`data recieved to clean is, ${JSON.stringify(dataToClean)}`);
         const cleanedData = [];
         dataToClean.forEach(translationObj => {
             const newTranslationObj = {
@@ -35,7 +38,7 @@ export class LanguageTranslationService {
             newTranslationObj.languageCode = 'en-us';
             cleanedData.push(newTranslationObj);
         });
-        console.log('cleaned data is ', JSON.stringify(cleanedData));
+        this.logger.info(`cleaned data is  ${JSON.stringify(cleanedData)}`);
         return cleanedData;
     }
 
@@ -51,27 +54,27 @@ export class LanguageTranslationService {
             detailsObj['translated_result'] = cleanedData;
             return {ok: true, data: detailsObj};
         } else {
-            console.log('looks like speech to text data is not present for translation, aborting the translate language sequence');
+            this.logger.info('looks like speech to text data is not present for translation, aborting the translate language sequence');
             return {ok: false, status: 500, error: 'Speech to Text Data is not present for language translation'};
         }
     }
     mergeTranslation(transdata, originalTranscriptResult: any) {
         const origdatawithtranslation = [];
-        console.log('recieved transdata as ', transdata);
+        this.logger.info(`recieved transdata as , ${JSON.stringify(transdata)}`);
         originalTranscriptResult.forEach((originalObject, originalIndex) => {
-            console.log('picking translation as ', transdata[originalIndex][0]);
+            this.logger.info(`picking translation as  ${transdata[originalIndex][0]}`);
             originalObject['alternatives'][0]['translation'] = Array.isArray(transdata[originalIndex]) ? transdata[originalIndex][0] : transdata[originalIndex];
-            console.log('assigned new object is ', originalObject);
+            this.logger.info(`assigned new object is  ${JSON.stringify(originalObject)}`);
             origdatawithtranslation.push(originalObject);
         });
-        console.log('returning updated speech to text data as ', origdatawithtranslation);
+        this.logger.info(`returning updated speech to text data as  ${origdatawithtranslation}`);
         return origdatawithtranslation;
     }
 
     startTranslation(speechToTextDataSet) {
         return new Promise((res, rej) => {
-            console.log('startTranslation ');
-            console.log(JSON.stringify(speechToTextDataSet));
+            this.logger.info('startTranslation ');
+            this.logger.info(JSON.stringify(speechToTextDataSet));
             const translationsPromises = [];
             speechToTextDataSet.forEach((speechContent, originalIndex) => {
                 if (speechContent.languageCode === 'en-us') {
@@ -82,7 +85,7 @@ export class LanguageTranslationService {
                         0,
                         Promise.resolve(speechContent.alternatives[0].transcript));
                 } else {
-                    console.log('translating ', speechContent['alternatives'][0]['transcript']);
+                    this.logger.info(`translating ', ${speechContent['alternatives'][0]['transcript']}`);
                     // send for translation
                     translationsPromises.splice(
                         originalIndex,

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import {resolve as pathResolve} from 'path';
 import {lstatSync, readdir} from 'fs';
 
@@ -7,6 +7,7 @@ import { SpeechToTextService } from '../speech-to-text/speech-to-text.service';
 import { LanguageTranslationService } from '../language-translation/language-translation.service';
 import { SentimentAnalysisService } from '../sentiment-analysis/sentiment-analysis.service';
 import { GoogleCloudSdkService } from '../google-cloud-sdk/google-cloud-sdk.service';
+import { Logger } from 'winston';
 
 @Injectable()
 export class GcloudService {
@@ -14,6 +15,7 @@ export class GcloudService {
     private storage;
 
     constructor(
+        @Inject('winston') private readonly logger: Logger,
         private readonly gcloudSDK: GoogleCloudSdkService,
         private readonly sttSrvc: SpeechToTextService,
         private readonly ltSrvc: LanguageTranslationService,
@@ -26,7 +28,7 @@ export class GcloudService {
     uploadFilesToGCloud(parentFolderAddrObject, bucketName?: string, cloudFilePath?: string): Promise<any> {
         return new Promise((resolve, reject) => {
             if (!bucketName) {
-                console.log('bucket name not provided, using default bucket ', this._DEFAULT_BUCKET_NAME);
+                this.logger.info(`bucket name not provided, using default bucket ${this._DEFAULT_BUCKET_NAME}`);
                 bucketName = this._DEFAULT_BUCKET_NAME;
             }
             const uploadPromises = [];
@@ -34,17 +36,17 @@ export class GcloudService {
             if (parentFolderAddrObject.hasOwnProperty('filePaths')) {
                 // cloudPath is mandatory
                 if (!cloudFilePath) {
-                    console.log('Cannot upload file paths if cloud dest path is not given (mandatory)');
+                    this.logger.error('Cannot upload file paths if cloud dest path is not given (mandatory)');
                     reject('Cannot upload file paths if cloud dest path is not given (mandatory)');
                     return;
                 } else {
                     // directly upload these files only
                     parentFolderAddrObject.filePaths.forEach(filePath => {
-                        console.log('uploading filepath -> ', filePath);
+                        this.logger.info(`uploading filepath -> ${filePath}`);
                         const fileInfoArr = filePath.split('/');
-                        console.log('file split information ', fileInfoArr);
+                        this.logger.info('file split information ', fileInfoArr);
                         cloudFilePath = `${cloudFilePath}/${fileInfoArr[fileInfoArr.length - 1]}`;
-                        console.log('triggering upload in cloud dir -->', cloudFilePath);
+                        this.logger.info('triggering upload in cloud dir -->', cloudFilePath);
                         uploadPromises.push(
                             this.storage.bucket(bucketName).upload(filePath, {
                                 destination: cloudFilePath,
@@ -58,7 +60,8 @@ export class GcloudService {
             // delegate storage object
             readdir(pathToFiles, (err, dirData) => {
                 if (err) {
-                    console.log(err);
+                    this.logger.error('An error occured while reading parent folder details for gcloud upload');
+                    this.logger.error(err);
                     reject('An Error occured while reading parent folder details for gcloud upload');
                 } else {
                     dirData.forEach(dirItem => {
@@ -70,7 +73,7 @@ export class GcloudService {
                                 // use the user defined cloud path
                                 cloudFilePath = `${cloudFilePath}/${dirItem}`;
                             }
-                            console.log('triggering upload in cloud dir -->', cloudFilePath);
+                            this.logger.info(`triggering upload in cloud dir --> ${cloudFilePath}`);
                             uploadPromises.push(
                                 this.storage.bucket(bucketName).upload(pathToFile, {
                                     destination: cloudFilePath,
@@ -87,14 +90,14 @@ export class GcloudService {
                 resolve(true);
             })
             .catch(err => {
-                console.log(err);
+                this.logger.error(err);
                 reject(null);
             });
         });
     }
 
     async startSpeechToTextConversion(dataObj): Promise<object> {
-        console.log('starting speech to text conversion with info ', dataObj);
+        this.logger.info(`starting speech to text conversion with info ${JSON.stringify(dataObj)}`);
         const s2tResult = await this.sttSrvc.initiate(dataObj);
         if (s2tResult['ok']) {
             // clean the result recieed and send it back
@@ -106,9 +109,9 @@ export class GcloudService {
     }
 
     async startLanguageTranslation(dataObj): Promise<object> {
-        console.log('starting language translation with data ', dataObj);
+        this.logger.info(`starting language translation with data ${JSON.stringify(dataObj)}`);
         if (dataObj['speech_to_text_status'] === 'DONE') {
-            console.log('speech to text data detected, proceeding to language translation');
+            this.logger.info('speech to text data detected, proceeding to language translation');
             const ltResult = await this.ltSrvc.initiate(dataObj);
             if (ltResult['ok']) {
                 return Promise.resolve({ok: true, data: ltResult['data']});
@@ -118,19 +121,18 @@ export class GcloudService {
                     session_id: dataObj['session_id'],
                     topic_name: dataObj['topic_name'],
                 };
-                console.log('sending error data as ', errorData);
                 // tslint:disable-next-line: max-line-length
                 return Promise.reject({ok: false, status: 500,  error: 'An Error occured while completing language translation sequence', data: errorData});
             }
         } else {
             // tslint:disable-next-line: max-line-length
-            console.log(`speech_to_text_status is not DONE, it is ${dataObj['speech_to_text_status']} cannot proceed to language translation sequence`);
+            this.logger.error(`speech_to_text_status is not DONE, it is ${dataObj['speech_to_text_status']} cannot proceed to language translation sequence`);
             return Promise.reject({ok: false, status: 503,  error: 'Speech To Text did not completed successfully, ABORTING THE PIPELINE'});
         }
     }
 
     startSentimentAnalysis() {
-        console.log('starting sentiment analysis');
+        this.logger.info('starting sentiment analysis');
         this.saSrvc.initiate({});
     }
 }

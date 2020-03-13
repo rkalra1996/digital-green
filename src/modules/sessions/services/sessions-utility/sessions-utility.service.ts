@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { PathResolverService } from 'src/services/path-resolver/path-resolver.service';
@@ -6,12 +6,14 @@ import {resolve} from 'path';
 import { GcloudService } from './../../../gcloud/services/gcloud/gcloud.service';
 import { FfmpegUtilityService } from '../../../../services/ffmpeg-utility/ffmpeg-utility.service';
 import { UserUtilityService } from '../../../users/services/user-utility/user-utility.service';
+import { Logger } from 'winston';
 
 export type Session = any;
 
 @Injectable()
 export class SessionsUtilityService {
     constructor(
+        @Inject('winston') private readonly logger: Logger,
         @InjectModel('sessions') private readonly SessionModel: Model<Session>,
         private readonly pathResolver: PathResolverService,
         private readonly gcloudSrvc: GcloudService,
@@ -36,8 +38,8 @@ export class SessionsUtilityService {
                     resolve([]);
                 }
             }).catch(err => {
-                console.log('Error while fetching sessions list for ', username);
-                console.log(err);
+                this.logger.error('Error while fetching sessions list for ');
+                this.logger.error(err);
                 resolve(null);
             });
         });
@@ -115,37 +117,40 @@ export class SessionsUtilityService {
      */
     async createUserSessionsInBatch(sessions) {
         return new Promise((resolve, reject) => {
-            console.log('inserting ', sessions);
+            this.logger.info(`inserting ', ${JSON.stringify(sessions)}`);
             if (sessions.length > 1) {
-                console.log('cannot insert more than one sessions at a time');
+                this.logger.info('cannot insert more than one sessions at a time');
                 resolve({ok: false, error: 'Multiple sessions sent for insert'});
             } else {
                 // read the session first, if it exists, ignore else create
                 const sessionToInsert = sessions[0];
-                console.log('session to insert is ', sessionToInsert);
+                this.logger.info(`session to insert is ', ${JSON.stringify(sessionToInsert)}`);
                 this.SessionModel.find({session_id: sessionToInsert.session_id})
                 .then(sessionRead => {
-                    console.log('session read is ', sessionRead);
+                    this.logger.info(`session read is ', ${JSON.stringify(sessionRead)}`);
                     if (Array.isArray(sessionRead) && sessionRead.length < 1) {
                         // no session id exists, creating new one
-                        console.log('No such session already present for ', sessionToInsert.session_id);
+                        this.logger.info(`No such session already present for ', ${sessionToInsert.session_id}`);
                         // no such session found, insert it
                         this.SessionModel.create({...sessionToInsert})
                         .then(sessionCreated => {
-                            console.log('session created ', sessionCreated);
+                            this.logger.info(`session created ', ${JSON.stringify(sessionCreated)}`);
                             resolve(sessionCreated);
                         })
                         .catch(creationError => {
-                            console.log('Error while creating a new session ', creationError);
+                            this.logger.error('Error while creating a new session ');
+                            this.logger.error(creationError);
                             resolve(null);
                         });
                     } else {
-                        console.log('unexpected session read response ', sessionRead);
+                        this.logger.info('unexpected session read response ');
+                        this.logger.error(sessionRead);
                         resolve({ok: true, message: `session already exists, won't create a new one`});
                     }
                 })
                 .catch(sessionReadErr => {
-                    console.log('error while reading an existing session', sessionReadErr);
+                    this.logger.info('error while reading an existing session');
+                    this.logger.error(sessionReadErr);
                     resolve(null);
                 });
             }
@@ -187,7 +192,8 @@ export class SessionsUtilityService {
                     });
                     resolve(sessionDetailsObject);
                 } catch (e) {
-                    console.log('An error occured while creating session details object ', e);
+                    this.logger.info('An error occured while creating session details object ');
+                    this.logger.error(e);
                     resolve(null);
                 }
             });
@@ -204,17 +210,17 @@ export class SessionsUtilityService {
     uploadFilesToCloudStorage(username, sessionID, parentSourceAddress?: string, fileNames?: any[]) {
         if (!parentSourceAddress) {
             parentSourceAddress = resolve(this.pathResolver.paths.TEMP_STORE_PATH);
-            console.log('to upload files from ', `${username}/${sessionID}/mono inside `, parentSourceAddress);
+            this.logger.info('to upload files from ', `${username}/${sessionID}/mono inside ` + parentSourceAddress);
         } else {
-            console.log('to upload files from ', `${parentSourceAddress}`);
+            this.logger.info('to upload files from ' + `${parentSourceAddress}`);
         }
         let addressObject = {};
         if (Array.isArray(fileNames) && fileNames.length > 0) {
-            console.log('joining file names ', fileNames);
+            this.logger.info(`joining file names ', ${JSON.stringify(fileNames)}`);
             addressObject = {
             filePaths: fileNames.map(fileName => resolve(parentSourceAddress,username,sessionID, 'mono', fileName)),
             };
-            console.log('object looks like', addressObject);
+            this.logger.info(`object looks like', ${addressObject}`);
         } else {
             addressObject = {
             parentFolderName: username,
@@ -237,11 +243,11 @@ export class SessionsUtilityService {
     convertTempFilesToMono(username, sessionID, topicID) {
         return new Promise((monoResolve, monoReject) => {
             const parentFolderAddr = resolve(this.pathResolver.paths.TEMP_STORE_PATH, username, sessionID);
-            console.log('parent folder to pick files for mono conversion is ', parentFolderAddr);
+            this.logger.info('parent folder to pick files for mono conversion is ' + parentFolderAddr);
             // start mono conversion
             const fileName = `${username}_${sessionID}_${topicID}.wav`;
             this.ffmpeg.convertStereo2Mono(parentFolderAddr, fileName , () => {
-                console.log('conversion to mono done');
+                this.logger.info('conversion to mono done');
                 monoResolve({ok: true});
             });
         });
@@ -253,20 +259,20 @@ export class SessionsUtilityService {
      * @returns Promise<object>
      */
     updateSessionFileStatus(sessionFileObject): Promise<any> {
-        console.log('updating session file status in database');
+        this.logger.info('updating session file status in database');
         return new Promise(async (sessionFileResolve, sessionFileReject) => {
             // check if user exists
             if (await this.userUtilitySrvc.userExists(sessionFileObject.username)) {
                 // check if session is already created
                 this.getSessionBySessionID(sessionFileObject.username, sessionFileObject.sessionID)
                 .then(fetchedSession => {
-                    console.log('fetched session from database is ');
-                    console.log(fetchedSession);
+                    this.logger.info('fetched session from database is ');
+                    this.logger.info(JSON.stringify(fetchedSession));
                     const newTopicsArray = [...fetchedSession.topics];
                     // add the file status to the session
                     const existingTopicIndex = newTopicsArray.findIndex(topic => topic.topic_name === sessionFileObject.topicName);
                     if (existingTopicIndex > -1) {
-                        console.log('updating topic');
+                        this.logger.info('updating topic');
                         // update the topic
                         newTopicsArray[existingTopicIndex]['file_data']['bucketname'] = sessionFileObject.bucketname;
                         newTopicsArray[existingTopicIndex]['file_data']['filename'] = sessionFileObject.filename;
@@ -278,7 +284,7 @@ export class SessionsUtilityService {
                         // setting it true for now, then rechecking it later
                         newTopicsArray[existingTopicIndex]['isUploaded'] = true;
                     } else {
-                        console.log('new topic');
+                        this.logger.info('new topic');
                         // new topic entry
                         newTopicsArray.push({
                             topic_name: sessionFileObject.topicName,
@@ -300,13 +306,13 @@ export class SessionsUtilityService {
                     if (newTopicsArray.length === fetchedSession['topics_limit']) {
                         if (!newTopicsArray.filter(topic => topic.isUploaded === false).length) {
                             // all topics have there files, set global uploaded status to true
-                            console.log('detected all topics having there respective cloud files');
+                            this.logger.info('detected all topics having there respective cloud files');
                             allUploaded = true;
                         }
                     }
                     // all data has been modified
-                    console.log('final updation object"s topics looks like ');
-                    console.log(newTopicsArray);
+                    this.logger.info('final updation object"s topics looks like ');
+                    this.logger.info(JSON.stringify(newTopicsArray));
                     this.SessionModel.updateOne(
                         {
                         username: sessionFileObject.username,
@@ -316,16 +322,16 @@ export class SessionsUtilityService {
                             topics: [...newTopicsArray],
                         },
                         ).then(updatedDoc => {
-                            console.log('updated doc now looks like ');
-                            console.log(updatedDoc);
+                            this.logger.info('updated doc now looks like ');
+                            this.logger.info(JSON.stringify(updatedDoc));
                             sessionFileResolve({ok: true, data: sessionFileObject});
                         }).catch(updationError => {
-                            console.log(updationError);
+                            this.logger.error(updationError);
                             sessionFileReject({ok: false, error: 'An Error occured while updating the database document'});
                         });
                 })
                 .catch(sessionFetchError => {
-                    console.log(sessionFetchError['error']);
+                    this.logger.error(sessionFetchError['error']);
                     sessionFileReject({ok: false, error: sessionFetchError['error']});
                 });
             } else {
@@ -342,20 +348,21 @@ export class SessionsUtilityService {
      */
     getSessionBySessionID(username: string, sessionID: string): Promise<any> {
         return new Promise((getSessionResolve, getSessionReject) => {
-            console.log('finding user ', username + ' with session id ' + sessionID);
+            this.logger.info('finding user ' + username + ' with session id ' + sessionID);
             this.SessionModel.findOne({
                 username,
                 session_id: sessionID,
             }).then(sessionDoc => {
                 if (!sessionDoc) {
-                    console.log('did not find any document in sessions collection corresponding to session_id', sessionID);
+                    this.logger.error('did not find any document in sessions collection corresponding to session_id' + sessionID);
                     getSessionReject({ok: false, error: 'did not find any document in sessions collection corresponding to session_id ' + sessionID});
                 }
-                console.log('session object retrieved from db', sessionDoc);
+                this.logger.info('session object retrieved from db' +  JSON.stringify(sessionDoc));
                 getSessionResolve(sessionDoc);
             })
             .catch(sessionError => {
-                console.log('sessionError : ', sessionError);
+                this.logger.error('sessionError : ');
+                this.logger.error(sessionError);
                 getSessionReject({ok: false, error: 'An error occured while verifying session username or session_id'});
             });
         });
@@ -386,8 +393,8 @@ export class SessionsUtilityService {
                 resolve({ok: true, data: sessionsData});
             })
             .catch((fetchErr) => {
-                console.log('Error while fetching session for user ', username);
-                console.log(fetchErr);
+                this.logger.info('Error while fetching session for user ' + username);
+                this.logger.error(fetchErr);
                 resolve({ok: false, error: `Error while fetching session for user ${username}`});
             });
         });
