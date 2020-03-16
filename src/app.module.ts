@@ -21,6 +21,7 @@ import { HealthModule } from './modules/health/health.module';
 import {WinstonModule} from 'nest-winston';
 import * as winston from 'winston';
 import 'winston-daily-rotate-file';
+import { RolesModule } from './modules/roles/roles.module';
 
 const errorStackFormat = winston.format(info => {
   if (info instanceof Error) {
@@ -75,7 +76,8 @@ const errorStackFormat = winston.format(info => {
     MongooseModule.forRoot(ENV.DG_DB_HOST, {useNewUrlParser: true, useUnifiedTopology: true}),
     UsersModule,
     SessionsModule,
-    WebhooksModule],
+    WebhooksModule,
+  RolesModule],
   controllers: [AppController],
   providers: [PathResolverService, AppService, SharedService, FfmpegUtilityService],
   exports: [SharedService, PathResolverService, FfmpegUtilityService],
