@@ -144,7 +144,8 @@ export class SessionsUtilityService {
                         });
                     } else {
                         this.logger.info('unexpected session read response ');
-                        this.logger.error(sessionRead);
+                        this.logger.info(sessionRead);
+                        this.logger.info(`session already exists, won't create a new one`);
                         resolve({ok: true, message: `session already exists, won't create a new one`});
                     }
                 })
