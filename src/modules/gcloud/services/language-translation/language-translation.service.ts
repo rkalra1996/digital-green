@@ -42,6 +42,29 @@ export class LanguageTranslationService {
         return cleanedData;
     }
 
+    /**
+     * Gets combined transcript en. This function will combine all the english translations into a single combined transcript.
+     * @param data
+     * @returns String
+     */
+    getCombinedTranscriptEN(data): string {
+        const combinedEnTranslation = data.reduce((acc, currentObj) => {
+            if (currentObj.hasOwnProperty('alternatives') && currentObj.alternatives.length > 0) {
+                let collectedTranslation = '';
+                currentObj.alternatives.forEach(altObj => {
+                    if (altObj.hasOwnProperty('translation') && altObj.translation.length > 0) {
+                        collectedTranslation += altObj.translation;
+                    }
+                });
+                return acc + collectedTranslation;
+            } else {
+                return acc;
+            }
+        }, '');
+        this.logger.info('combined en translation is ' + combinedEnTranslation);
+        return combinedEnTranslation;
+    }
+
     async initiate(detailsObj) {
         // get the transcrip result and translate it accordingly
         if (detailsObj.hasOwnProperty('speech_to_text_result')) {
@@ -50,8 +73,10 @@ export class LanguageTranslationService {
             const transdata = await this.updateTranslation(translatedpromise);
             const mergedata =  this.mergeTranslation(transdata, originalTranscriptResult);
             const cleanedData = this.cleanMergedData(mergedata);
+            const combinedTranscriptEN = this.getCombinedTranscriptEN(cleanedData);
             // merge this data with detailsObj and send it back
             detailsObj['translated_result'] = cleanedData;
+            detailsObj['combined_transcript_en'] = combinedTranscriptEN;
             return {ok: true, data: detailsObj};
         } else {
             this.logger.info('looks like speech to text data is not present for translation, aborting the translate language sequence');

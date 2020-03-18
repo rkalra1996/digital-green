@@ -101,9 +101,11 @@ export class GcloudService {
         const s2tResult = await this.sttSrvc.initiate(dataObj);
         if (s2tResult['ok']) {
             // clean the result recieed and send it back
+            this.logger.info('recieved response from speech to text api');
             const cleanedResult = this.sttSrvc.cleanResult(s2tResult['data']);
             return Promise.resolve({ok: true, data: cleanedResult});
         } else {
+            this.logger.info('catched error from speech to text api');
             return Promise.reject({ok: false, status: 500,  error: 'An Error occured while completing speech to text sequence'});
         }
     }

@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { GcloudService } from './../../../gcloud/services/gcloud/gcloud.service';
 import { PipelineUtilityService } from '../pipeline-utility/pipeline-utility.service';
 import { Logger } from 'winston';
+import { KeyPhraseCoreService } from 'src/modules/key-phrase/services/key-phrase-core/key-phrase-core.service';
 
 @Injectable()
 export class PipelineCoreService {
@@ -9,6 +10,7 @@ export class PipelineCoreService {
     constructor(
         @Inject('winston') private readonly logger: Logger,
         private readonly gcloudCore: GcloudService,
+        private readonly keyPhraseCore: KeyPhraseCoreService,
         private readonly pipelineUtility: PipelineUtilityService,
         ) {}
 
@@ -35,16 +37,33 @@ export class PipelineCoreService {
                 this.logger.info(`updated speech to text response in session db --> ', ${JSON.stringify(updated)}`);
                 this.gcloudCore.startLanguageTranslation({
                     speech_to_text_status: 'DONE',
-                    combined_transcript_status: 'DONE' ,
+                    combined_transcript_status: 'DONE',
                     ...s2tRes['data']})
                     .then(ltRes => {
                         this.logger.info(`recieved response from language translation sequence', ${JSON.stringify(ltRes)}`);
-                        this.pipelineUtility.updateSessionTopicInDB(ltRes['data'], {
+                        const updationObject = {
                             language_translation_status: 'DONE',
-                            translated_result: ltRes['data']['translated_result']
-                        }).then(translationUpdated => {
+                            combined_transcript_en_status: 'DONE',
+                            translated_result: ltRes['data']['translated_result'],
+                            combined_transcript_en: ltRes['data']['combined_transcript_en'],
+                        };
+                        this.logger.info('updation object to send in database for language translation success is ' + JSON.stringify(updationObject));
+                        this.pipelineUtility.updateSessionTopicInDB(ltRes['data'], updationObject).then(translationUpdated => {
                                 this.logger.info(`updated language translation response in session DB ', ${translationUpdated}`);
-                                this.logger.info('pipeline finished successfully');
+                                this.logger.info('triggering keyPhrase extraction pieline sequence');
+                                this.keyPhraseCore.startKeyPhraseExtraction(
+                                    {   language_translation_status: 'DONE',
+                                        combined_transcript_en_status: 'DONE',
+                                        ...ltRes['data'],
+                                    })
+                                .then(kpRes => {
+                                    this.logger.info(`recieved response from keyPhrase extraction as ${JSON.stringify(kpRes)}`);
+                                    this.logger.info('pipeline finished successfully');
+                                })
+                                .catch(kpErr => {
+                                    this.logger.error('recieved error from keyphrase extraction');
+                                    this.logger.error(kpErr);
+                                });
                             });
                     })
                     .catch(async ltErr => {
