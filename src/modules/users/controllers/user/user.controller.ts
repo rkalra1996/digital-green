@@ -36,7 +36,7 @@ export class UserController {
         this.logger.info('GET /user/list hit');
         const users = await this.userService.readAllUsers(body);
         if (users['ok']) {
-            this.logger.info('sending abck users list as ' + JSON.stringify(users));
+            // this.logger.info('sending abck users list as ' + JSON.stringify(users));
             return response.status(200).send({status: 200, users: users['data']});
         } else {
             this.logger.error('detected err while reading allusers api' + JSON.stringify(users));

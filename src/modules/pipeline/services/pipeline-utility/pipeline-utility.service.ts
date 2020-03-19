@@ -55,6 +55,7 @@ export class PipelineUtilityService {
     }
 
     updateSessionTopicStatusFailure(userObj, dataToAdd): Promise<object> {
+        this.logger.info('data recieved to update failure status in db -->' + JSON.stringify(dataToAdd));
         return new Promise((res, rej) => {
             this.updateSessionTopicInDB(userObj, dataToAdd)
             .then(updated => {

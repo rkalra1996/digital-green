@@ -14,18 +14,21 @@ export class KeyPhraseCoreService {
         return new Promise(async (resolve, reject) => {
             this.logger.info(`recieved data in key phrase sequence as ${JSON.stringify(data)}`);
             if (data['combined_transcript_en_status'] === 'DONE') {
-                const combinedText = data['combined_transcript_en'];
-                this.logger.info('combined transcript read as ' + combinedText);
-                const kpRes = await this.kpUtility.hitKpRequest({});
-                if (kpRes['ok']) {
-                    resolve(kpRes['data']);
+                const isExtracted = await this.kpUtility.initiateKeyPhraseExtraction(data);
+                if (isExtracted['ok']) {
+                    resolve({ok: true, data: isExtracted['data']});
                 } else {
-                    reject({ok: true, message: 'recieved response'});
+                    reject({ok: false, status: isExtracted['status'], error: isExtracted['error'], data: isExtracted['data']});
                 }
             } else {
                 this.logger.info('combined_transcript_status detected as not DONE ---> ' + data['combined_transcript_status']);
                 this.logger.info('sending ABORTION process');
-                reject({ok: false, error: 'COMBINED_TRANSCRIPT STATUS DETECTED AS ' + data['combined_transcript_status'] + ', ABORTING THE PIPELINE'});
+                const errorData = {
+                    username: data['username'],
+                    session_id: data['session_id'],
+                    topic_name: data['topic_name'],
+                };
+                reject({ok: false, status: 503, data: errorData, error: 'COMBINED_TRANSCRIPT STATUS DETECTED AS ' + data['combined_transcript_status'] + ', ABORTING THE PIPELINE'});
             }
         });
     }

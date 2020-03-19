@@ -1,3 +1,4 @@
+// tslint:disable: max-line-length
 import { Injectable, Inject } from '@nestjs/common';
 import { GcloudService } from './../../../gcloud/services/gcloud/gcloud.service';
 import { PipelineUtilityService } from '../pipeline-utility/pipeline-utility.service';
@@ -58,11 +59,49 @@ export class PipelineCoreService {
                                     })
                                 .then(kpRes => {
                                     this.logger.info(`recieved response from keyPhrase extraction as ${JSON.stringify(kpRes)}`);
-                                    this.logger.info('pipeline finished successfully');
+                                    const kpUpdationObject = {
+                                        key_phrase_extraction_status: 'DONE',
+                                        key_phrase_extraction_result: kpRes['data']['key_phrase_extraction_result'],
+                                    };
+                                    this.pipelineUtility.updateSessionTopicInDB(kpRes['data'], kpUpdationObject)
+                                    .then(kpUpdateSucess => {
+                                        this.logger.info('key phrase extraction result has been updated in database successfully -> ' + kpUpdateSucess);
+                                        this.logger.info('pipeline finished successfully');
+                                    })
+                                    .catch(kpUpdateErr => {
+                                        this.logger.error('An error occured while updating data for KPE in the database');
+                                        this.logger.error(kpUpdateErr);
+                                    });
                                 })
-                                .catch(kpErr => {
-                                    this.logger.error('recieved error from keyphrase extraction');
-                                    this.logger.error(kpErr);
+                                .catch(async kpErr => {
+                                    if (kpErr['status'] === 503) {
+                                        // process abortion error, halt the pipeline for this data
+                                        this.logger.error(kpErr['error']);
+                                        const ErrStateupdated = await this.pipelineUtility.updateSessionTopicStatusFailure({
+                                            username: kpErr['data']['username'],
+                                            session_id: kpErr['data']['session_id'],
+                                            topic_name: kpErr['data']['topic_name'],
+                                        }, {key_phrase_extraction_status: 'ABORTED'});
+                                        if (ErrStateupdated['ok']) {
+                                            this.logger.info('abort status for key phrase extraction has been updated successfully');
+                                        } else {
+                                            this.logger.error(ErrStateupdated['error']);
+                                        }
+                                    } else {
+                                        // generic error
+                                        this.logger.info('error detected in key Phrase Extraction sequence');
+                                        this.logger.error(kpErr['error']);
+                                        const ErrStateupdated = await this.pipelineUtility.updateSessionTopicStatusFailure({
+                                            username: kpErr['data']['username'],
+                                            session_id: kpErr['data']['session_id'],
+                                            topic_name: kpErr['data']['topic_name'],
+                                        }, {key_phrase_extraction_status: 'FAILED'});
+                                        if (ErrStateupdated['ok']) {
+                                            this.logger.info('failure status for key phrase extraction has been updated successfully');
+                                        } else {
+                                            this.logger.error(ErrStateupdated['error']);
+                                        }
+                                    }
                                 });
                             });
                     })
