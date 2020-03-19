@@ -24,12 +24,13 @@ export class SessionsUtilityService {
     /**
      * Gets session list
      * @description Internally calls findSessions by username method to gather sessions list from database
-     * @param username
+     * @param [username]
      * @returns null if an error occurs or a list of sessions matching username
      */
-    async getSessionList(username: string) {
+    async getSessionList(username?: string) {
         return new Promise((resolve, reject) => {
-            this.SessionModel.find({username}).sort('-created') // sort with most recent created sessions
+            const query = username ? {username} : {};
+            this.SessionModel.find(query).sort('-created') // sort with most recent created sessions
             .then(sessionList => {
                 if (Array.isArray(sessionList)) {
                     resolve(sessionList);

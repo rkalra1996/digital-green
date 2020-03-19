@@ -39,7 +39,13 @@ export class SessionsService {
                 }
             }
         } else {
-            return {ok: false, status: 400, error: 'USERNAME EMPTY'};
+            // return {ok: false, status: 400, error: 'USERNAME EMPTY'};
+            const dbSessionList = await this.sessionsUtilitySrvc.getSessionList();
+            if (dbSessionList) {
+                return {ok: true, status: 200, data: dbSessionList};
+            } else {
+                return {ok: false, status: 500, error: 'An error occured while reading sessions from database'};
+            }
         }
     }
 
