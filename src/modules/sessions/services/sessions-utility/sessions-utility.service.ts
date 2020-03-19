@@ -411,6 +411,7 @@ export class SessionsUtilityService {
             const finalObj = {
                 name: session.name,
                 session_id: session.session_id,
+                created: session.created,
                 isUploaded: session.isUploaded,
                 username: session.username,
             };
