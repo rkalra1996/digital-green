@@ -22,6 +22,7 @@ import {WinstonModule} from 'nest-winston';
 import * as winston from 'winston';
 import 'winston-daily-rotate-file';
 import { RolesModule } from './modules/roles/roles.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 const errorStackFormat = winston.format(info => {
   if (info instanceof Error) {
@@ -77,7 +78,8 @@ const errorStackFormat = winston.format(info => {
     UsersModule,
     SessionsModule,
     WebhooksModule,
-  RolesModule],
+    DashboardModule,
+    RolesModule],
   controllers: [AppController],
   providers: [PathResolverService, AppService, SharedService, FfmpegUtilityService],
   exports: [SharedService, PathResolverService, FfmpegUtilityService],
