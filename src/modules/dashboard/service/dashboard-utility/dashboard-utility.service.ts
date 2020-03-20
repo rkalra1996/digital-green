@@ -140,4 +140,25 @@ export class DashboardUtilityService {
         // this.logger.info('combined en translation is ' + combinedEnTranslation);
         return combinedEnTranslation;
     }
+
+    parseQueryParamsForDate(data) {
+        this.logger.info(`Query params recieved are ${JSON.stringify(data)}`);
+        const dateObj = {
+            from: '',
+            to: '',
+        };
+        if (data.hasOwnProperty('from')) {
+            dateObj.from = new Date(data.from).toISOString();
+        } else {
+            // empty string means all the data unitl "to" date
+            dateObj.from = '';
+        }
+        if (data.hasOwnProperty('to')) {
+            dateObj.to = new Date(data.to).toISOString();
+        } else {
+            dateObj.to = new Date().toISOString();
+        }
+        this.logger.info(`Date object looks like ${JSON.stringify(dateObj)}`);
+        return dateObj;
+    }
 }
