@@ -9,13 +9,14 @@ import { SharedService } from './../../services/shared/shared.service';
 import { PathResolverService } from 'src/services/path-resolver/path-resolver.service';
 import { GcloudModule } from '../gcloud/gcloud.module';
 import { FfmpegUtilityService } from '../../services/ffmpeg-utility/ffmpeg-utility.service';
+import { GcloudService } from '../gcloud/services/gcloud/gcloud.service';
 
 @Module({
     imports: [
         MongooseModule.forFeature([{name: 'sessions', schema: SessionSchema}]),
         UsersModule, GcloudModule],
-    providers: [SessionsService, SessionsUtilityService, SharedService, PathResolverService, FfmpegUtilityService],
+    providers: [SessionsService, SessionsUtilityService, SharedService, PathResolverService, FfmpegUtilityService, GcloudService],
     controllers: [SessionsController],
-    exports: [SessionsUtilityService],
+    exports: [SessionsUtilityService, PathResolverService, GcloudService, FfmpegUtilityService],
 })
 export class SessionsModule {}
