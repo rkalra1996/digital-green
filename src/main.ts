@@ -1,8 +1,8 @@
 // tslint:disable-next-line: no-var-requires
 import {env as ENV} from 'process';
 
-console.log('loading environment config from ', ENV['DG_ENV_CONFIG_PATH']);
-const config = require('dotenv').config({ path: ENV['DG_ENV_CONFIG_PATH'] , debug: true});
+console.log('loading environment config from ', ENV['DG_STAGING_ENV_CONFIG_PATH']);
+const config = require('dotenv').config({ path: ENV['DG_STAGING_ENV_CONFIG_PATH'] , debug: true});
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
