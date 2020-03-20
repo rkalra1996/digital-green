@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PathResolverService } from '../path-resolver/path-resolver.service';
 import * as path from 'path';
-import { writeFileSync, existsSync, mkdirSync, writeFile } from 'fs';
+import { writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import {homedir} from 'os';
 import { Logger } from 'winston';
 
@@ -41,5 +41,20 @@ export class SharedService {
             });
         }
         return {ok: true};
+    }
+
+    deleteFileFromTempStorage(filePath: string) {
+        const parentFolderAddr = path.resolve(this.pathResolver.paths.TEMP_STORE_PATH, filePath);
+        this.logger.info('triggering delete file from --> ' + parentFolderAddr);
+        try {
+            if (existsSync(parentFolderAddr)) {
+                unlinkSync(parentFolderAddr);
+            } else {
+                this.logger.info(`${parentFolderAddr} is not present, no need to delete`);
+            }
+        } catch (e) {
+            this.logger.info('An error occured while triggering the delete file procedure');
+            this.logger.error(e);
+        }
     }
 }

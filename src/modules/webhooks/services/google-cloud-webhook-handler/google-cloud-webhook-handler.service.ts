@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SessionsUtilityService } from '../../../sessions/services/sessions-utility/sessions-utility.service';
 import { PipelineCoreService } from './../../../pipeline/services/pipeline-core/pipeline-core.service';
 import { Logger } from 'winston';
+import { SharedService } from './../../../../services/shared/shared.service';
 
 @Injectable()
 export class GoogleCloudWebhookHandlerService {
@@ -10,6 +11,7 @@ export class GoogleCloudWebhookHandlerService {
         @Inject('winston') private readonly logger: Logger,
         private readonly sessionUtilitySrvc: SessionsUtilityService,
         private readonly pipelineSrvc: PipelineCoreService,
+        private readonly sharedService: SharedService
         ) {}
 
     handleWebhookEvent(webhookData): Promise<object> {
@@ -20,6 +22,8 @@ export class GoogleCloudWebhookHandlerService {
             this.sessionUtilitySrvc.updateSessionFileStatus(fileInfo)
             .then(response => {
                 this.logger.info('file record updated in the session collection successfully');
+                // delete the temp store file saved, as it is no longer needed
+                this.deleteTempFile(fileInfo);
                 resolve({ok: true});
                 // start the pipeline
                 this.pipelineSrvc.initiate(response.data);
@@ -54,5 +58,15 @@ export class GoogleCloudWebhookHandlerService {
             uploadedOn,
             modifiedOn,
         };
+    }
+
+    deleteTempFile(fileObj) {
+        this.logger.info('file has been saved properly, now time to delete it from temp store');
+        const monofilePath = `${fileObj['username']}/${fileObj['sessionID']}/mono/${fileObj['filename']}`;
+        const processedFilePath = `${fileObj['username']}/processed/${fileObj['sessionID']}/${fileObj['filename'].split('mono_')[1]}`;
+        this.logger.info('mono file path is ' + monofilePath);
+        this.logger.info('processed file path is ' + processedFilePath);
+        this.sharedService.deleteFileFromTempStorage(monofilePath);
+        this.sharedService.deleteFileFromTempStorage(processedFilePath);
     }
 }

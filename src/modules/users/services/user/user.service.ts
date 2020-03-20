@@ -61,8 +61,8 @@ export class UserService {
           // parse the usersObjects as needed
           const parsedUsers = this.userUSrvc.parseUserObjForRead(requestBody);
           this.userUSrvc.readUsersFromDB(parsedUsers)
-          .then(userList => {
-            this.logger.info('retrieved users as ' + JSON.stringify(userList));
+          .then((userList: object[] | null) => {
+            this.logger.info('retrieved total users ' + userList.length);
             res({ok: true, data: userList});
           })
           .catch(UreadErr => {

@@ -1,7 +1,9 @@
+// tslint:disable: max-line-length
 import { Injectable, Inject } from '@nestjs/common';
 import { GcloudService } from './../../../gcloud/services/gcloud/gcloud.service';
 import { PipelineUtilityService } from '../pipeline-utility/pipeline-utility.service';
 import { Logger } from 'winston';
+import { KeyPhraseCoreService } from 'src/modules/key-phrase/services/key-phrase-core/key-phrase-core.service';
 
 @Injectable()
 export class PipelineCoreService {
@@ -9,6 +11,7 @@ export class PipelineCoreService {
     constructor(
         @Inject('winston') private readonly logger: Logger,
         private readonly gcloudCore: GcloudService,
+        private readonly keyPhraseCore: KeyPhraseCoreService,
         private readonly pipelineUtility: PipelineUtilityService,
         ) {}
 
@@ -35,16 +38,71 @@ export class PipelineCoreService {
                 this.logger.info(`updated speech to text response in session db --> ', ${JSON.stringify(updated)}`);
                 this.gcloudCore.startLanguageTranslation({
                     speech_to_text_status: 'DONE',
-                    combined_transcript_status: 'DONE' ,
+                    combined_transcript_status: 'DONE',
                     ...s2tRes['data']})
                     .then(ltRes => {
                         this.logger.info(`recieved response from language translation sequence', ${JSON.stringify(ltRes)}`);
-                        this.pipelineUtility.updateSessionTopicInDB(ltRes['data'], {
+                        const updationObject = {
                             language_translation_status: 'DONE',
-                            translated_result: ltRes['data']['translated_result']
-                        }).then(translationUpdated => {
+                            combined_transcript_en_status: 'DONE',
+                            translated_result: ltRes['data']['translated_result'],
+                            combined_transcript_en: ltRes['data']['combined_transcript_en'],
+                        };
+                        this.logger.info('updation object to send in database for language translation success is ' + JSON.stringify(updationObject));
+                        this.pipelineUtility.updateSessionTopicInDB(ltRes['data'], updationObject).then(translationUpdated => {
                                 this.logger.info(`updated language translation response in session DB ', ${translationUpdated}`);
-                                this.logger.info('pipeline finished successfully');
+                                this.logger.info('triggering keyPhrase extraction pieline sequence');
+                                this.keyPhraseCore.startKeyPhraseExtraction(
+                                    {   language_translation_status: 'DONE',
+                                        combined_transcript_en_status: 'DONE',
+                                        ...ltRes['data'],
+                                    })
+                                .then(kpRes => {
+                                    this.logger.info(`recieved response from keyPhrase extraction as ${JSON.stringify(kpRes)}`);
+                                    const kpUpdationObject = {
+                                        key_phrase_extraction_status: 'DONE',
+                                        key_phrase_extraction_result: kpRes['data']['key_phrase_extraction_result'],
+                                    };
+                                    this.pipelineUtility.updateSessionTopicInDB(kpRes['data'], kpUpdationObject)
+                                    .then(kpUpdateSucess => {
+                                        this.logger.info('key phrase extraction result has been updated in database successfully -> ' + kpUpdateSucess);
+                                        this.logger.info('pipeline finished successfully');
+                                    })
+                                    .catch(kpUpdateErr => {
+                                        this.logger.error('An error occured while updating data for KPE in the database');
+                                        this.logger.error(kpUpdateErr);
+                                    });
+                                })
+                                .catch(async kpErr => {
+                                    if (kpErr['status'] === 503) {
+                                        // process abortion error, halt the pipeline for this data
+                                        this.logger.error(kpErr['error']);
+                                        const ErrStateupdated = await this.pipelineUtility.updateSessionTopicStatusFailure({
+                                            username: kpErr['data']['username'],
+                                            session_id: kpErr['data']['session_id'],
+                                            topic_name: kpErr['data']['topic_name'],
+                                        }, {key_phrase_extraction_status: 'ABORTED'});
+                                        if (ErrStateupdated['ok']) {
+                                            this.logger.info('abort status for key phrase extraction has been updated successfully');
+                                        } else {
+                                            this.logger.error(ErrStateupdated['error']);
+                                        }
+                                    } else {
+                                        // generic error
+                                        this.logger.info('error detected in key Phrase Extraction sequence');
+                                        this.logger.error(kpErr['error']);
+                                        const ErrStateupdated = await this.pipelineUtility.updateSessionTopicStatusFailure({
+                                            username: kpErr['data']['username'],
+                                            session_id: kpErr['data']['session_id'],
+                                            topic_name: kpErr['data']['topic_name'],
+                                        }, {key_phrase_extraction_status: 'FAILED'});
+                                        if (ErrStateupdated['ok']) {
+                                            this.logger.info('failure status for key phrase extraction has been updated successfully');
+                                        } else {
+                                            this.logger.error(ErrStateupdated['error']);
+                                        }
+                                    }
+                                });
                             });
                     })
                     .catch(async ltErr => {

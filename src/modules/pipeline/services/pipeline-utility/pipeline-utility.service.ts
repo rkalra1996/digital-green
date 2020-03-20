@@ -20,6 +20,7 @@ export class PipelineUtilityService {
      * @returns Promise<boolean (true) | string (error)>
      */
     updateSessionTopicInDB(userInfoObj, dataToAdd): Promise<boolean | string> {
+        this.logger.info('recieved data to update in database as ' + JSON.stringify(dataToAdd));
         return new Promise((res, rej) => {
             if (userInfoObj['session_id'] && userInfoObj['username'] && userInfoObj['topic_name']) {
                 this.logger.info(`saving data for session id ', ${userInfoObj['session_id']}`);
@@ -54,6 +55,7 @@ export class PipelineUtilityService {
     }
 
     updateSessionTopicStatusFailure(userObj, dataToAdd): Promise<object> {
+        this.logger.info('data recieved to update failure status in db -->' + JSON.stringify(dataToAdd));
         return new Promise((res, rej) => {
             this.updateSessionTopicInDB(userObj, dataToAdd)
             .then(updated => {
