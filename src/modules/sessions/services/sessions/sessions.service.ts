@@ -8,7 +8,7 @@ import { Logger } from 'winston';
 @Injectable()
 export class SessionsService {
     public GCLOUD_STORAGE = 'gcloud';
-    public GCLOUD_BUCKET = ENV.DG_GOOGLE_APP_STORAGE;
+    public GCLOUD_BUCKET = ENV.DG_STAGING_GOOGLE_APP_STORAGE;
 
     constructor(
         @Inject('winston') private readonly logger: Logger,

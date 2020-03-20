@@ -21,7 +21,7 @@ export class GcloudService {
         private readonly ltSrvc: LanguageTranslationService,
         private readonly saSrvc: SentimentAnalysisService,
         ) {
-        this._DEFAULT_BUCKET_NAME = ENV.DG_GOOGLE_APP_STORAGE;
+        this._DEFAULT_BUCKET_NAME = ENV.DG_STAGING_GOOGLE_APP_STORAGE;
         this.storage = this.gcloudSDK.getStorageInstance;
     }
 

@@ -17,8 +17,8 @@ async function bootstrap() {
     console.log('error while loading the environment variables', config);
   } else {
     console.log('config loaded is ', config);
-    await app.listen(ENV.DG_SERVER_PORT);
-    console.log('server up and running at port -> ', ENV.DG_SERVER_PORT);
+    await app.listen(ENV.DG_STAGING_SERVER_PORT);
+    console.log('server up and running at port -> ', ENV.DG_STAGING_SERVER_PORT);
   }
 }
 bootstrap();

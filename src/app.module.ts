@@ -45,13 +45,13 @@ const errorStackFormat = winston.format(info => {
       transports: [
       new (winston.transports.DailyRotateFile)({
         level: 'error',
-        filename: ENV.DG_ERROR_LOGS_DIR + '%DATE%_' + ENV.DG_ERROR_LOG_FILENAME,
+        filename: ENV.DG_STAGING_ERROR_LOGS_DIR + '%DATE%_' + ENV.DG_STAGING_ERROR_LOG_FILENAME,
         datePattern: 'DD-MM-YYYY',
         maxSize: '20m',
       }),
       new (winston.transports.DailyRotateFile)({
         level: 'info',
-        filename: ENV.DG_COMBINED_LOGS_DIR + '%DATE%_' + ENV.DG_COMBINED_LOG_FILENAME,
+        filename: ENV.DG_STAGING_COMBINED_LOGS_DIR + '%DATE%_' + ENV.DG_STAGING_COMBINED_LOG_FILENAME,
         datePattern: 'DD-MM-YYYY',
         maxSize: '20m',
       }),
@@ -66,7 +66,7 @@ const errorStackFormat = winston.format(info => {
     ],
     exceptionHandlers: [
       new (winston.transports.DailyRotateFile)({
-        filename: ENV.DG_ERROR_LOGS_DIR + '%DATE%_' + ENV.DG_ERROR_LOG_FILENAME,
+        filename: ENV.DG_STAGING_ERROR_LOGS_DIR + '%DATE%_' + ENV.DG_STAGING_ERROR_LOG_FILENAME,
         datePattern: 'DD-MM-YYYY',
        }),
     ],
@@ -74,7 +74,7 @@ const errorStackFormat = winston.format(info => {
     // LoggerModule,
     HealthModule,
     AuthModule,
-    MongooseModule.forRoot(ENV.DG_DB_HOST, {useNewUrlParser: true, useUnifiedTopology: true}),
+    MongooseModule.forRoot(ENV.DG_STAGING_DB_HOST, {useNewUrlParser: true, useUnifiedTopology: true}),
     UsersModule,
     SessionsModule,
     WebhooksModule,

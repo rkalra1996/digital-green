@@ -13,9 +13,9 @@ export class KeyPhraseUtilityService {
     ) {}
 
     hitKpRequest(data): object| Promise<object> {
-        this.logger.info('hitting api for keyPhrase on url ' + env.DG_KEY_PHRASE_ENDPOINT);
-        if (env.DG_KEY_PHRASE_ENDPOINT) {
-            return this.http.post(env.DG_KEY_PHRASE_ENDPOINT, data).toPromise()
+        this.logger.info('hitting api for keyPhrase on url ' + env.DG_STAGING_KEY_PHRASE_ENDPOINT);
+        if (env.DG_STAGING_KEY_PHRASE_ENDPOINT) {
+            return this.http.post(env.DG_STAGING_KEY_PHRASE_ENDPOINT, data).toPromise()
             .then(httpRes => {
                 this.logger.info('recieved response from KPE API as ' + JSON.stringify(httpRes.data));
                 if (httpRes.hasOwnProperty('status') && httpRes.status === 200) {

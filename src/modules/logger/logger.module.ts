@@ -12,12 +12,12 @@ import { UniversalLoggerService } from './services/universal-logger/universal-lo
             transports: [
             new winston.transports.File({
               level: 'error',
-              filename: ENV.DG_ERROR_LOGS_PATH,
+              filename: ENV.DG_STAGING_ERROR_LOGS_PATH,
               // format: winston.format.json(),
             }),
             new winston.transports.File({
               level: 'info',
-              filename: ENV.DG_COMBINED_LOGS_PATH,
+              filename: ENV.DG_STAGING_COMBINED_LOGS_PATH,
               // format: winston.format.json(),
             }),
             new winston.transports.Console({
@@ -29,7 +29,7 @@ import { UniversalLoggerService } from './services/universal-logger/universal-lo
             }),
           ],
           exceptionHandlers: [
-            new winston.transports.File({ filename: ENV.DG_ERROR_LOGS_PATH }),
+            new winston.transports.File({ filename: ENV.DG_STAGING_ERROR_LOGS_PATH }),
           ],
         }),
     ],
