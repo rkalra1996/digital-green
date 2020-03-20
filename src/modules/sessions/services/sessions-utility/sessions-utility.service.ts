@@ -48,10 +48,14 @@ export class SessionsUtilityService {
 
     getSessionQuery(dateFilterObj: object, username?: string) {
         let q = username ? {username} : {};
-        if (dateFilterObj['from']) {
-            q['created'] = {"$gte": new Date(dateFilterObj['from']), "$lte": new Date(dateFilterObj['to'])};
+        if (dateFilterObj) {
+            if (dateFilterObj['from']) {
+                q['created'] = {"$gte": new Date(dateFilterObj['from']), "$lte": new Date(dateFilterObj['to'])};
+            } else {
+                q['created'] = {"$lte": new Date(dateFilterObj['to'])};
+            }
         } else {
-            q['created'] = {"$lte": new Date(dateFilterObj['to'])};
+            this.logger.info('no date filter object supplied, will not use it either');
         }
         this.logger.info('final query created as ' + JSON.stringify(q));
         return q;
