@@ -12,9 +12,10 @@ export class DashboardCoreService {
         private readonly dashbordUtilitySrvc: DashboardUtilityService,
     ) {}
 
-    async generateReport() {
+    async generateReport(username?: string, dateFilter?: object) {
         const reportData = {};
-        const databaseSessions = await this.sessionUtSrvc.getSessionList();
+        const databaseSessions = await this.sessionUtSrvc.getSessionList(username, dateFilter);
+        this.logger.info('recieved sessions dump from database');
         if (databaseSessions) {
             reportData['totalSessions'] = databaseSessions['length'];
             const completionInfo = this.dashbordUtilitySrvc.sessionsCompletedTillDate(databaseSessions);

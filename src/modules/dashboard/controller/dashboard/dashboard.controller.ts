@@ -1,19 +1,24 @@
-import { Controller, Get, Res, Inject } from '@nestjs/common';
+import { Controller, Get, Res, Inject, Query, UseGuards } from '@nestjs/common';
 import { DashboardCoreService } from '../../service/dashboard-core/dashboard-core.service';
 import { Logger } from 'winston';
+import { DashboardUtilityService } from '../../service/dashboard-utility/dashboard-utility.service';
+import { AuthGuard } from '@nestjs/passport';
 
+@UseGuards(AuthGuard('jwt'))
 @Controller('dashboard')
 export class DashboardController {
 
     constructor(
         @Inject('winston') private readonly logger: Logger,
         private readonly dashboardCore: DashboardCoreService,
+        private readonly dashBUtility: DashboardUtilityService,
     ) {}
 
     @Get('get-report')
-    async getDatabaseReport(@Res() response): Promise<any> {
+    async getDatabaseReport(@Query() queryParams, @Res() response): Promise<any> {
         this.logger.info('GET /dashboard/get-report');
-        const reportData = await this.dashboardCore.generateReport();
+        const dateFilters = this.dashBUtility.parseQueryParamsForDate(queryParams);
+        const reportData = await this.dashboardCore.generateReport(queryParams['user'], dateFilters);
         if (reportData['ok']) {
             response.status(200).send({ok: true, data: reportData['data']});
         } else {

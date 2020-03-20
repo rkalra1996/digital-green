@@ -27,9 +27,9 @@ export class SessionsUtilityService {
      * @param [username]
      * @returns null if an error occurs or a list of sessions matching username
      */
-    async getSessionList(username?: string) {
+    async getSessionList(username?: string, dateFilterObj?: object) {
         return new Promise((resolve, reject) => {
-            const query = username ? {username} : {};
+            const query = this.getSessionQuery(dateFilterObj, username);
             this.SessionModel.find(query).sort('-created') // sort with most recent created sessions
             .then(sessionList => {
                 if (Array.isArray(sessionList)) {
@@ -44,6 +44,21 @@ export class SessionsUtilityService {
                 resolve(null);
             });
         });
+    }
+
+    getSessionQuery(dateFilterObj: object, username?: string) {
+        let q = username ? {username} : {};
+        if (dateFilterObj) {
+            if (dateFilterObj['from']) {
+                q['created'] = {"$gte": new Date(dateFilterObj['from']), "$lte": new Date(dateFilterObj['to'])};
+            } else {
+                q['created'] = {"$lte": new Date(dateFilterObj['to'])};
+            }
+        } else {
+            this.logger.info('no date filter object supplied, will not use it either');
+        }
+        this.logger.info('final query created as ' + JSON.stringify(q));
+        return q;
     }
 
     /**
