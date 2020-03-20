@@ -1,8 +1,10 @@
-import { Controller, Get, Res, Inject, Query } from '@nestjs/common';
+import { Controller, Get, Res, Inject, Query, UseGuards } from '@nestjs/common';
 import { DashboardCoreService } from '../../service/dashboard-core/dashboard-core.service';
 import { Logger } from 'winston';
 import { DashboardUtilityService } from '../../service/dashboard-utility/dashboard-utility.service';
+import { AuthGuard } from '@nestjs/passport';
 
+@UseGuards(AuthGuard('jwt'))
 @Controller('dashboard')
 export class DashboardController {
 
