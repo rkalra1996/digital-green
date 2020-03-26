@@ -13,6 +13,8 @@ async function bootstrap() {
   });
   // enable cors
   app.enableCors();
+  // add global prefix to all apis
+  app.setGlobalPrefix('api');
   if (config.error) {
     console.log('error while loading the environment variables', config);
   } else {
