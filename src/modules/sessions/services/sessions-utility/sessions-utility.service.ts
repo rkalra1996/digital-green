@@ -47,18 +47,26 @@ export class SessionsUtilityService {
     }
 
     getSessionQuery(dateFilterObj: object, username?: string) {
+        // query has to be created in a way such that the from day should start from 00HRS and to day should end at 2359HRS
         let q = username ? {username} : {};
         if (dateFilterObj) {
             if (dateFilterObj['from']) {
-                q['created'] = {"$gte": new Date(dateFilterObj['from']), "$lte": new Date(dateFilterObj['to'])};
+                q['created'] = {$gte: new Date(dateFilterObj['from']), $lte: this.getCompleteDay(dateFilterObj['to'])};
             } else {
-                q['created'] = {"$lte": new Date(dateFilterObj['to'])};
+                q['created'] = {$lte: this.getCompleteDay(dateFilterObj['to'])};
             }
         } else {
             this.logger.info('no date filter object supplied, will not use it either');
         }
         this.logger.info('final query created as ' + JSON.stringify(q));
         return q;
+    }
+
+    getCompleteDay(date) {
+        const dateArray = new Date(date).toLocaleString().split(',');
+        dateArray[1] = ' 23:59:59';
+        const newDate = dateArray.join(',');
+        return new Date(newDate);
     }
 
     /**
