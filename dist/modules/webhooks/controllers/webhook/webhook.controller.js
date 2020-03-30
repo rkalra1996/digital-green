@@ -15,20 +15,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
 const google_cloud_webhook_handler_service_1 = require("../../services/google-cloud-webhook-handler/google-cloud-webhook-handler.service");
 let WebhookController = class WebhookController {
-    constructor(GCWehookSrvc) {
+    constructor(logger, GCWehookSrvc) {
+        this.logger = logger;
         this.GCWehookSrvc = GCWehookSrvc;
     }
     async delegateWebhook(requestBody, params, response) {
-        console.log('[WEBHOOK] /webhook/digital-green recieved');
-        console.log(`${requestBody.bucket}/${requestBody.name}`);
+        this.logger.info('[WEBHOOK] /webhook/digital-green recieved');
+        this.logger.info(`${requestBody.bucket}/${requestBody.name}`);
         if (params.bucketName === 'google-cloud') {
-            console.log('delegating to google-cloud handlers');
+            this.logger.info('delegating to google-cloud handlers');
             this.GCWehookSrvc.handleWebhookEvent(requestBody)
                 .then(handlerResponse => {
-                console.log('Event has been updated in the database successfully');
+                this.logger.info('Event has been updated in the database successfully');
             })
                 .catch(handlerError => {
-                console.log('An Error occured while updating the event in the database', handlerError);
+                this.logger.info('An Error occured while updating the event in the database');
+                this.logger.error(handlerError);
             });
         }
         return response.status(200).send();
@@ -43,7 +45,8 @@ __decorate([
 ], WebhookController.prototype, "delegateWebhook", null);
 WebhookController = __decorate([
     common_1.Controller('webhook'),
-    __metadata("design:paramtypes", [google_cloud_webhook_handler_service_1.GoogleCloudWebhookHandlerService])
+    __param(0, common_1.Inject('winston')),
+    __metadata("design:paramtypes", [Object, google_cloud_webhook_handler_service_1.GoogleCloudWebhookHandlerService])
 ], WebhookController);
 exports.WebhookController = WebhookController;
 //# sourceMappingURL=webhook.controller.js.map

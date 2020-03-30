@@ -15,21 +15,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./../../../auth/services/auth/auth.service");
 const user_utility_service_1 = require("../user-utility/user-utility.service");
+const roles_utility_service_1 = require("./../../../roles/services/roles-utility/roles-utility.service");
 let UserService = class UserService {
-    constructor(logger, authSrvc, userUSrvc) {
+    constructor(logger, authSrvc, userUSrvc, rolesUSrvc) {
         this.logger = logger;
         this.authSrvc = authSrvc;
         this.userUSrvc = userUSrvc;
+        this.rolesUSrvc = rolesUSrvc;
     }
     async login(username, password) {
         const isUser = await this.userUSrvc.validateUser(username, password);
         if (isUser['ok']) {
             const tokenData = await this.authSrvc.login({ username: isUser.user.username, sub: isUser.user.userId, email: isUser.user.email });
-            console.log('user ', username + ' logged in successfully');
+            this.logger.info('user ' + username + ' logged in successfully');
             return Promise.resolve({ ok: true, data: tokenData });
         }
         else {
-            console.log('user ', username + ' login failed ---> ' + isUser['error']);
+            this.logger.info('user ' + username + ' login failed ---> ');
+            this.logger.error(isUser['error']);
             return Promise.resolve({ ok: isUser['ok'], status: isUser['status'], error: isUser['error'] });
         }
     }
@@ -45,7 +48,8 @@ let UserService = class UserService {
             }
         }
         else {
-            console.log('error validating users ', newUsers['error']);
+            this.logger.info('error validating users ');
+            this.logger.error(newUsers['error']);
             return Promise.resolve({ ok: false, status: newUsers['status'], error: newUsers['error'] });
         }
     }
@@ -55,27 +59,53 @@ let UserService = class UserService {
             if (validated['ok']) {
                 const parsedUsers = this.userUSrvc.parseUserObjForRead(requestBody);
                 this.userUSrvc.readUsersFromDB(parsedUsers)
-                    .then(userList => {
-                    this.logger.info('retrieved users as ' + JSON.stringify(userList));
+                    .then((userList) => {
+                    this.logger.info('retrieved total users ' + userList.length);
                     res({ ok: true, data: userList });
                 })
                     .catch(UreadErr => {
-                    this.logger.error('got error while reading users in user read api ' + UreadErr);
+                    this.logger.info('got error while reading users in user read api ');
+                    this.logger.error(UreadErr);
                     res({ ok: false, status: 500, error: UreadErr });
                 });
             }
             else {
-                this.logger.error('validation error recorded while validating the user objects in user read api' + JSON.stringify(validated));
+                this.logger.info('validation error recorded while validating the user objects in user read api');
+                this.logger.error(JSON.stringify(validated));
                 res({ ok: false, status: validated['status'], error: validated['error'] });
             }
         });
+    }
+    async readUsersWithQuestions() {
+        const allUsers = await this.userUSrvc.readUsersFromDB([]);
+        if (Array.isArray(allUsers)) {
+            const rolesInfo = await this.rolesUSrvc.getAllRoles();
+            if (rolesInfo['ok']) {
+                try {
+                    const mergedUsersWithQuestions = this.userUSrvc.mergeUsersWithQuestions(allUsers, rolesInfo['data']);
+                    return { ok: true, data: mergedUsersWithQuestions };
+                }
+                catch (e) {
+                    this.logger.info('An error occured while merging users with their role specific questions');
+                    this.logger.error(e);
+                    return { ok: false, status: 500, error: 'An unexpected error occured while merging users, try again later' };
+                }
+            }
+            else {
+                return { ok: false, status: rolesInfo['status'], error: rolesInfo['error'] };
+            }
+        }
+        else {
+            return { ok: false, status: allUsers['status'] || 500, error: allUsers['error'] || 'An unexpected error while reading all users' };
+        }
     }
 };
 UserService = __decorate([
     common_1.Injectable(),
     __param(0, common_1.Inject('winston')),
     __metadata("design:paramtypes", [Object, auth_service_1.AuthService,
-        user_utility_service_1.UserUtilityService])
+        user_utility_service_1.UserUtilityService,
+        roles_utility_service_1.RolesUtilityService])
 ], UserService);
 exports.UserService = UserService;
 //# sourceMappingURL=user.service.js.map

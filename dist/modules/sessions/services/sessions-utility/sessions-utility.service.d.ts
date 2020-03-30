@@ -3,15 +3,23 @@ import { PathResolverService } from 'src/services/path-resolver/path-resolver.se
 import { GcloudService } from './../../../gcloud/services/gcloud/gcloud.service';
 import { FfmpegUtilityService } from '../../../../services/ffmpeg-utility/ffmpeg-utility.service';
 import { UserUtilityService } from '../../../users/services/user-utility/user-utility.service';
+import { Logger } from 'winston';
 export declare type Session = any;
 export declare class SessionsUtilityService {
+    private readonly logger;
     private readonly SessionModel;
     private readonly pathResolver;
     private readonly gcloudSrvc;
     private readonly ffmpeg;
     private readonly userUtilitySrvc;
-    constructor(SessionModel: Model<Session>, pathResolver: PathResolverService, gcloudSrvc: GcloudService, ffmpeg: FfmpegUtilityService, userUtilitySrvc: UserUtilityService);
-    getSessionList(username: string): Promise<unknown>;
+    constructor(logger: Logger, SessionModel: Model<Session>, pathResolver: PathResolverService, gcloudSrvc: GcloudService, ffmpeg: FfmpegUtilityService, userUtilitySrvc: UserUtilityService);
+    getSessionList(username?: string, dateFilterObj?: object): Promise<unknown>;
+    getSessionQuery(dateFilterObj: object, username?: string): {
+        username: string;
+    } | {
+        username?: undefined;
+    };
+    getCompleteDay(date: any): Date;
     validateSessionObject(sessionData: any): boolean;
     validateSessionBody(body: object): Promise<object>;
     createUserSessionsInBatch(sessions: any): Promise<unknown>;

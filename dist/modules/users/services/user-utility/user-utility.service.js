@@ -33,7 +33,8 @@ let UserUtilityService = class UserUtilityService {
                 }
             })
                 .catch(err => {
-                console.log('An error occured while retriving user for login', err);
+                this.logger.info('An error occured while retriving user for login');
+                this.logger.error(err);
                 resolve(null);
             });
         });
@@ -82,7 +83,7 @@ let UserUtilityService = class UserUtilityService {
         }
     }
     getParsedNewUsers(userBody) {
-        console.log('parsing ', userBody);
+        this.logger.info('parsing ' + JSON.stringify(userBody));
         userBody.users = userBody.users.map(user => {
             if (!user.hasOwnProperty('name')) {
                 user['name'] = user.username;
@@ -102,7 +103,8 @@ let UserUtilityService = class UserUtilityService {
                         userBody.users.every((newUserObject, index) => {
                             const response = this.validateNewUser(newUserObject);
                             if (!response['ok']) {
-                                console.log('validation failed for some new user', newUserObject);
+                                this.logger.error('validation failed for some new user');
+                                this.logger.error(JSON.stringify(newUserObject));
                                 throw new Error(response['error'] + '@@' + index);
                             }
                             return response;
@@ -127,20 +129,21 @@ let UserUtilityService = class UserUtilityService {
         }
     }
     async registerUsers(newUsers) {
-        console.log('going to register ', newUsers);
+        this.logger.info('going to register ' + JSON.stringify(newUsers));
         return new Promise((insertRes, insertRej) => {
             this.UserModel.insertMany(newUsers)
                 .then(inserted => {
-                console.log('new users inserted ', inserted);
+                this.logger.info('new users inserted ' + JSON.stringify(inserted));
                 insertRes({ ok: true, users: inserted });
             })
                 .catch(insertErr => {
                 if (insertErr.code.toString() === '11000' && insertErr.name.toString().toLowerCase() === 'bulkwriteerror') {
-                    console.log('duplicae user insert error');
+                    this.logger.error('duplicae user insert error. One or more users are already registered with same username');
                     insertRes({ ok: false, status: 400, error: 'Error occured while inserting users. One or more users are already registered with same username' });
                 }
                 else {
-                    console.log('An error detected while inserting users', insertErr);
+                    this.logger.info('An error detected while inserting users');
+                    this.logger.error(insertErr);
                     insertRes({ ok: false, status: 500, error: 'Error occured while inserting users' });
                 }
             });
@@ -194,7 +197,7 @@ let UserUtilityService = class UserUtilityService {
     }
     readUsersFromDB(usersArray) {
         return new Promise((res, rej) => {
-            if (usersArray.length > 1) {
+            if (usersArray.length >= 1) {
                 this.UsersModel.find({
                     $or: [...usersArray],
                 }).then(usersDocs => {
@@ -206,7 +209,7 @@ let UserUtilityService = class UserUtilityService {
                 });
             }
             else {
-                this.UserModel.find(usersArray[0])
+                this.UserModel.find()
                     .then(userDoc => {
                     res(userDoc);
                 })
@@ -215,6 +218,34 @@ let UserUtilityService = class UserUtilityService {
                     rej('An error occured while reading user from read api');
                 });
             }
+        });
+    }
+    mergeUsersWithQuestions(usersArray, rolesArray) {
+        const mergedUsers = usersArray.map(user => {
+            const rolesInfo = this.getRoleBasedInfo(rolesArray, user['role']);
+            return Object.assign(Object.assign({}, user._doc), rolesInfo);
+        });
+        return mergedUsers;
+    }
+    getRoleBasedInfo(rolesArray, userRole) {
+        const role = rolesArray.find(roleObj => (roleObj['role'] === userRole.toLowerCase()));
+        if (role) {
+            return {
+                role: role.role,
+                questions: this.parseQuestions(role.questions),
+            };
+        }
+        else {
+            return null;
+        }
+    }
+    parseQuestions(questionArr) {
+        return questionArr.map(q => {
+            return {
+                question_id: q['topic_id'],
+                question_topic: q['topic_title'] ? q['topic_title']['en'] : '',
+                question_text: q['topic_name']['en'],
+            };
         });
     }
 };

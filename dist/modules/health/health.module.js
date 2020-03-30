@@ -23,7 +23,7 @@ let HealthModule = class HealthModule {
 HealthModule = __decorate([
     common_1.Module({
         imports: [
-            mongoose_1.MongooseModule.forRoot(process_1.env.DG_DB_HOST, { useNewUrlParser: true, useUnifiedTopology: true }),
+            mongoose_1.MongooseModule.forRoot(process_1.env.DG_STAGING_DB_HOST, { useNewUrlParser: true, useUnifiedTopology: true }),
             terminus_1.TerminusModule.forRootAsync({
                 inject: [terminus_1.MongooseHealthIndicator],
                 useFactory: getTerminusOptions,

@@ -14,6 +14,7 @@ const mongoose_1 = require("@nestjs/mongoose");
 const user_utility_service_1 = require("./services/user-utility/user-utility.service");
 const user_schema_1 = require("./schemas/user.schema");
 const users_schema_1 = require("./schemas/users.schema");
+const roles_module_1 = require("../roles/roles.module");
 let UsersModule = class UsersModule {
 };
 UsersModule = __decorate([
@@ -22,10 +23,11 @@ UsersModule = __decorate([
             auth_module_1.AuthModule,
             mongoose_1.MongooseModule.forFeature([{ name: 'User', schema: user_schema_1.UserSchema }]),
             mongoose_1.MongooseModule.forFeature([{ name: 'Users', schema: users_schema_1.UsersSchema }]),
+            roles_module_1.RolesModule,
         ],
         controllers: [user_controller_1.UserController],
         providers: [user_service_1.UserService, user_utility_service_1.UserUtilityService],
-        exports: [user_utility_service_1.UserUtilityService],
+        exports: [user_service_1.UserService, user_utility_service_1.UserUtilityService],
     })
 ], UsersModule);
 exports.UsersModule = UsersModule;

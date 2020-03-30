@@ -1,13 +1,15 @@
 import { SessionsUtilityService } from '../sessions-utility/sessions-utility.service';
 import { UserUtilityService } from './../../../users/services/user-utility/user-utility.service';
 import { SharedService } from './../../../../services/shared/shared.service';
+import { Logger } from 'winston';
 export declare class SessionsService {
+    private readonly logger;
     private readonly sessionsUtilitySrvc;
     private readonly userUtilitySrvc;
     private readonly sharedSrvc;
     GCLOUD_STORAGE: string;
     GCLOUD_BUCKET: string;
-    constructor(sessionsUtilitySrvc: SessionsUtilityService, userUtilitySrvc: UserUtilityService, sharedSrvc: SharedService);
+    constructor(logger: Logger, sessionsUtilitySrvc: SessionsUtilityService, userUtilitySrvc: UserUtilityService, sharedSrvc: SharedService);
     getUserSessions(username: string): Promise<{
         ok: boolean;
         status: number;

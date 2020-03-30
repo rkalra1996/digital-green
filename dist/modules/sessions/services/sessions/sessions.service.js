@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
 const sessions_utility_service_1 = require("../sessions-utility/sessions-utility.service");
@@ -15,12 +18,13 @@ const user_utility_service_1 = require("./../../../users/services/user-utility/u
 const shared_service_1 = require("./../../../../services/shared/shared.service");
 const process_1 = require("process");
 let SessionsService = class SessionsService {
-    constructor(sessionsUtilitySrvc, userUtilitySrvc, sharedSrvc) {
+    constructor(logger, sessionsUtilitySrvc, userUtilitySrvc, sharedSrvc) {
+        this.logger = logger;
         this.sessionsUtilitySrvc = sessionsUtilitySrvc;
         this.userUtilitySrvc = userUtilitySrvc;
         this.sharedSrvc = sharedSrvc;
         this.GCLOUD_STORAGE = 'gcloud';
-        this.GCLOUD_BUCKET = process_1.env.DG_GOOGLE_APP_STORAGE;
+        this.GCLOUD_BUCKET = process_1.env.DG_STAGING_GOOGLE_APP_STORAGE;
     }
     async getUserSessions(username) {
         if (username && typeof username === 'string') {
@@ -39,7 +43,13 @@ let SessionsService = class SessionsService {
             }
         }
         else {
-            return { ok: false, status: 400, error: 'USERNAME EMPTY' };
+            const dbSessionList = await this.sessionsUtilitySrvc.getSessionList();
+            if (dbSessionList) {
+                return { ok: true, status: 200, data: dbSessionList };
+            }
+            else {
+                return { ok: false, status: 500, error: 'An error occured while reading sessions from database' };
+            }
         }
     }
     async createUserSessions(sessionData) {
@@ -63,7 +73,7 @@ let SessionsService = class SessionsService {
     initiateUpload(sessionObject, cloudType = this.GCLOUD_STORAGE) {
         return new Promise(async (resolve, reject) => {
             if (cloudType === this.GCLOUD_STORAGE) {
-                console.log('initiating gcloud upload sequence\n');
+                this.logger.info('initiating gcloud upload sequence\n');
                 const username = Object.keys(sessionObject)[0];
                 const fileDataObject = [];
                 sessionObject[username].topics.forEach(topic => {
@@ -75,19 +85,28 @@ let SessionsService = class SessionsService {
                 const filesSaved = await this.sharedSrvc.saveToTempStorage(`${username}/${sessionObject[username]['sessionid']}`, fileDataObject);
                 if (filesSaved['ok']) {
                     resolve(true);
-                    console.log('session object looks like ', sessionObject);
+                    this.logger.info('session object looks like ');
+                    this.logger.info(JSON.stringify({
+                        originalname: sessionObject[username]['topics'][0]['fileData']['originalname'],
+                        encoding: sessionObject[username]['topics'][0]['fileData']['encoding'],
+                        mimetype: sessionObject[username]['topics'][0]['fileData']['mimetype'],
+                        size: sessionObject[username]['topics'][0]['fileData']['size']
+                    }));
                     const isMonoConverted = await this.sessionsUtilitySrvc.convertTempFilesToMono(username, sessionObject[username]['sessionid'], sessionObject[username]['topics'][0]['name']);
                     if (isMonoConverted['ok']) {
                         const monoFileNames = fileDataObject.map(fileObj => `mono_${fileObj.filename}`);
                         this.sessionsUtilitySrvc.uploadFilesToCloudStorage(username, sessionObject[username]['sessionid'], undefined, monoFileNames).then(uploadedToCloud => {
-                            console.log('process uploading to gcloud triggered successfully', uploadedToCloud);
+                            this.logger.info('process uploading to gcloud triggered successfully' + uploadedToCloud);
                         })
                             .catch(error => {
-                            console.log('An Error occured while triggering upload to gcloud ', error);
+                            this.logger.info('An Error occured while triggering upload to gcloud ');
+                            this.logger.error(error);
                         });
                     }
                 }
                 else {
+                    this.logger.info('error detected while saving files ');
+                    this.logger.error(filesSaved['error']);
                     reject(filesSaved['error']);
                 }
             }
@@ -100,13 +119,16 @@ let SessionsService = class SessionsService {
             return { ok: true, data: finalResponseObject };
         }
         else {
+            this.logger.info('returning back error from getUserSessionsStatus');
+            this.logger.error(sessionsData['error']);
             return { ok: false, error: sessionsData['error'] };
         }
     }
 };
 SessionsService = __decorate([
     common_1.Injectable(),
-    __metadata("design:paramtypes", [sessions_utility_service_1.SessionsUtilityService,
+    __param(0, common_1.Inject('winston')),
+    __metadata("design:paramtypes", [Object, sessions_utility_service_1.SessionsUtilityService,
         user_utility_service_1.UserUtilityService,
         shared_service_1.SharedService])
 ], SessionsService);

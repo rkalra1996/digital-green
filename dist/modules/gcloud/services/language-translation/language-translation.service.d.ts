@@ -1,10 +1,13 @@
 import { GoogleCloudSdkService } from '../google-cloud-sdk/google-cloud-sdk.service';
+import { Logger } from 'winston';
 export declare class LanguageTranslationService {
+    private readonly logger;
     private readonly gcloudSDK;
     private translator;
-    constructor(gcloudSDK: GoogleCloudSdkService);
+    constructor(logger: Logger, gcloudSDK: GoogleCloudSdkService);
     updateTranslation(translationsPromises: any): Promise<void | [unknown, unknown, unknown, unknown, unknown, unknown, unknown, unknown, unknown, unknown]>;
     cleanMergedData(dataToClean: any): any[];
+    getCombinedTranscriptEN(data: any): string;
     initiate(detailsObj: any): Promise<{
         ok: boolean;
         data: any;

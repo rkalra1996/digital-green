@@ -14,8 +14,8 @@ const path = require("path");
 const process_1 = require("process");
 let GoogleCloudSdkService = class GoogleCloudSdkService {
     constructor() {
-        this.configPath = process_1.env.DG_GOOGLE_CLOUD_AUTH_PATH || '/home/rishabh34139/official_projects/configs/speaker-diarization-resource-53072b0e1c49.json';
-        this.projectID = process_1.env.DG_GOOGLE_PROJECT_ID || 'speaker-diarization-resource';
+        this.configPath = process_1.env.DG_STAGING_GOOGLE_CLOUD_AUTH_PATH || '/home/rishabh34139/official_projects/configs/speaker-diarization-resource-53072b0e1c49.json';
+        this.projectID = process_1.env.DG_STAGING_GOOGLE_PROJECT_ID || 'speaker-diarization-resource';
         this.config = {
             keyFilename: path.resolve(this.configPath),
             projectId: this.projectID,

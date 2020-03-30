@@ -22,6 +22,8 @@ const health_module_1 = require("./modules/health/health.module");
 const nest_winston_1 = require("nest-winston");
 const winston = require("winston");
 require("winston-daily-rotate-file");
+const roles_module_1 = require("./modules/roles/roles.module");
+const dashboard_module_1 = require("./modules/dashboard/dashboard.module");
 const errorStackFormat = winston.format(info => {
     if (info instanceof Error) {
         return Object.assign({}, info, {
@@ -42,13 +44,13 @@ AppModule = __decorate([
                 transports: [
                     new (winston.transports.DailyRotateFile)({
                         level: 'error',
-                        filename: process_1.env.DG_ERROR_LOGS_DIR + '%DATE%_' + process_1.env.DG_ERROR_LOG_FILENAME,
+                        filename: process_1.env.DG_STAGING_ERROR_LOGS_DIR + '%DATE%_' + process_1.env.DG_STAGING_ERROR_LOG_FILENAME,
                         datePattern: 'DD-MM-YYYY',
                         maxSize: '20m',
                     }),
                     new (winston.transports.DailyRotateFile)({
                         level: 'info',
-                        filename: process_1.env.DG_COMBINED_LOGS_DIR + '%DATE%_' + process_1.env.DG_COMBINED_LOG_FILENAME,
+                        filename: process_1.env.DG_STAGING_COMBINED_LOGS_DIR + '%DATE%_' + process_1.env.DG_STAGING_COMBINED_LOG_FILENAME,
                         datePattern: 'DD-MM-YYYY',
                         maxSize: '20m',
                     }),
@@ -59,17 +61,19 @@ AppModule = __decorate([
                 ],
                 exceptionHandlers: [
                     new (winston.transports.DailyRotateFile)({
-                        filename: process_1.env.DG_ERROR_LOGS_DIR + '%DATE%_' + process_1.env.DG_ERROR_LOG_FILENAME,
+                        filename: process_1.env.DG_STAGING_ERROR_LOGS_DIR + '%DATE%_' + process_1.env.DG_STAGING_ERROR_LOG_FILENAME,
                         datePattern: 'DD-MM-YYYY',
                     }),
                 ],
             }),
             health_module_1.HealthModule,
             auth_module_1.AuthModule,
-            mongoose_1.MongooseModule.forRoot(process_1.env.DG_DB_HOST, { useNewUrlParser: true, useUnifiedTopology: true }),
+            mongoose_1.MongooseModule.forRoot(process_1.env.DG_STAGING_DB_HOST, { useNewUrlParser: true, useUnifiedTopology: true }),
             users_module_1.UsersModule,
             sessions_module_1.SessionsModule,
-            webhooks_module_1.WebhooksModule
+            webhooks_module_1.WebhooksModule,
+            dashboard_module_1.DashboardModule,
+            roles_module_1.RolesModule
         ],
         controllers: [app_controller_1.AppController],
         providers: [path_resolver_service_1.PathResolverService, app_service_1.AppService, shared_service_1.SharedService, ffmpeg_utility_service_1.FfmpegUtilityService],

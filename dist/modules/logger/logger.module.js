@@ -22,11 +22,11 @@ LoggerModule = __decorate([
                 transports: [
                     new winston.transports.File({
                         level: 'error',
-                        filename: process_1.env.DG_ERROR_LOGS_PATH,
+                        filename: process_1.env.DG_STAGING_ERROR_LOGS_PATH,
                     }),
                     new winston.transports.File({
                         level: 'info',
-                        filename: process_1.env.DG_COMBINED_LOGS_PATH,
+                        filename: process_1.env.DG_STAGING_COMBINED_LOGS_PATH,
                     }),
                     new winston.transports.Console({
                         level: 'info',
@@ -34,7 +34,7 @@ LoggerModule = __decorate([
                     }),
                 ],
                 exceptionHandlers: [
-                    new winston.transports.File({ filename: process_1.env.DG_ERROR_LOGS_PATH }),
+                    new winston.transports.File({ filename: process_1.env.DG_STAGING_ERROR_LOGS_PATH }),
                 ],
             }),
         ],
