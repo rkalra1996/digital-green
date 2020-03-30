@@ -27,14 +27,21 @@ export class DashboardUtilityService {
         }, 0);
     }
 
-    pipelineFailureInfo(data) {
+    getUserInfoFromDetails(userArray, username) {
+        return userArray.find(user => user.username === username);
+    }
+
+    pipelineFailureInfo(data, userDetails?: object[]) {
         const userInfo = {};
+        const userDetailsMap = new Map();
         data.forEach(session => {
             if (!Object.keys(userInfo).includes(session['username'])) {
                 userInfo[session['username']] = [];
+                userDetailsMap.set(session['username'], this.getUserInfoFromDetails(userDetails['data'], session['username']));
             }
             const sessionAnalysisObj = {
                 session_name: session['name'],
+                session_created_by: userDetailsMap.get(session['username'])['name'] || '',
                 session_id: session['session_id'],
                 session_created_at: new Date(session['created']).toLocaleString(),
                 session_is_uploaded: session['isUploaded'],
@@ -48,7 +55,7 @@ export class DashboardUtilityService {
 
                 },
             };
-            const questionAnalysisData = this.getTopicAnalysis(session['topics']);
+            const questionAnalysisData = this.getTopicAnalysis(session['topics'], userDetailsMap.get(session['username']));
             sessionAnalysisObj.pipeline.pipeline_completed_count = questionAnalysisData['pipeline_completed_count'];
             sessionAnalysisObj.pipeline.pipeline_failed_count = questionAnalysisData['pipeline_failed_count'];
             sessionAnalysisObj.pipeline.pipeline_completed_details = questionAnalysisData['pipeline_completed_details'];
@@ -58,7 +65,11 @@ export class DashboardUtilityService {
         return userInfo;
     }
 
-    getTopicAnalysis(topicsArray) {
+    getQuestionText(questionId, roleData) {
+        return roleData.questions.find(question => question['question_id'] === questionId).question_text;
+    }
+
+    getTopicAnalysis(topicsArray, userRoleInfo) {
         let pipelineCompletedCount = 0;
         let pipelineFailedCount = 0;
         const pipelineCompletedDetails = [];
@@ -68,7 +79,9 @@ export class DashboardUtilityService {
             let selectedBlock = 'pipelineCompletedDetails';
             const questionObj = {
                 question_name: topic['topic_name'],
+                question_recorded_by: userRoleInfo['name'] || '',
                 question_id: topic['topic_id'],
+                question_text: this.getQuestionText(topic['topic_id'], userRoleInfo),
                 question_uploaded: topic['isUploaded'],
                 question_recording_uri: topic['file_data']['mediaURI'],
                 question_recording_uploaded_on: new Date(topic['file_data']['uploadedOn']).toLocaleString(),
@@ -160,5 +173,9 @@ export class DashboardUtilityService {
         }
         this.logger.info(`Date object looks like ${JSON.stringify(dateObj)}`);
         return dateObj;
+    }
+
+    mergeSessionsInfoWithUsers(sessionDetails, userDetails) {
+        return this.pipelineFailureInfo(sessionDetails, userDetails);
     }
 }

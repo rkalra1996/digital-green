@@ -3,6 +3,7 @@ import { AuthService } from './../../../auth/services/auth/auth.service';
 import { UserUtilityService } from '../user-utility/user-utility.service';
 
 import {Logger} from 'winston';
+import { RolesUtilityService } from './../../../roles/services/roles-utility/roles-utility.service';
 
 @Injectable()
 export class UserService {
@@ -11,6 +12,7 @@ export class UserService {
       @Inject('winston') private readonly logger: Logger,
       private readonly authSrvc: AuthService,
       private readonly userUSrvc: UserUtilityService,
+      private readonly rolesUSrvc: RolesUtilityService,
       ) {}
     /**
      * @description This function will internally check if the user exists and returns access token
@@ -76,5 +78,33 @@ export class UserService {
           res({ok: false, status: validated['status'], error: validated['error']});
         }
       });
+    }
+
+    /**
+     * Reads users with questions.
+     * @description This function is a mapper, which maps all the users with the questions being assigned to them, on the basis of user role and
+     * return the result
+     * 
+     */
+    async readUsersWithQuestions() {
+      const allUsers = await this.userUSrvc.readUsersFromDB([]);
+      if (Array.isArray(allUsers)) {
+        // read the role specific information from the database
+        const rolesInfo = await this.rolesUSrvc.getAllRoles();
+        if (rolesInfo['ok']) {
+          try {
+            const mergedUsersWithQuestions = this.userUSrvc.mergeUsersWithQuestions(allUsers, rolesInfo['data']);
+            return {ok: true, data: mergedUsersWithQuestions};
+          } catch(e) {
+            this.logger.info('An error occured while merging users with their role specific questions');
+            this.logger.error(e);
+            return {ok: false, status: 500, error: 'An unexpected error occured while merging users, try again later'};
+          }
+        } else {
+          return {ok: false, status: rolesInfo['status'], error: rolesInfo['error']};
+        }
+      } else {
+        return {ok: false, status: allUsers['status'] || 500, error: allUsers['error'] || 'An unexpected error while reading all users'};
+      }
     }
 }
