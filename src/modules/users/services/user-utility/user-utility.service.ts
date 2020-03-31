@@ -201,7 +201,7 @@ export class UserUtilityService {
 
     readUsersFromDB(usersArray) {
         return new Promise((res, rej) => {
-            if (usersArray.length > 1) {
+            if (usersArray.length >= 1) {
                 // const usernames = usersArray.map(userObj => userObj['username']);
                 this.UsersModel.find({
                     $or: [...usersArray],
@@ -214,7 +214,7 @@ export class UserUtilityService {
                 });
             } else {
                 // for only single user read
-                this.UserModel.find(usersArray[0])
+                this.UserModel.find()
                 .then(userDoc => {
                     res(userDoc);
                 })
@@ -223,6 +223,40 @@ export class UserUtilityService {
                     rej('An error occured while reading user from read api');
                 });
             }
+        });
+    }
+
+    mergeUsersWithQuestions(usersArray, rolesArray) {
+        const mergedUsers = usersArray.map(user => {
+            const rolesInfo = this.getRoleBasedInfo(rolesArray, user['role']);
+            return {
+                ...user._doc,
+                ...rolesInfo,
+            };
+        });
+        return mergedUsers;
+    }
+
+    getRoleBasedInfo(rolesArray, userRole) {
+        const role = rolesArray.find(roleObj => (roleObj['role'] === userRole.toLowerCase()));
+        if (role) {
+            return {
+                role: role.role,
+                questions: this.parseQuestions(role.questions),
+
+            };
+        } else {
+            return null;
+        }
+    }
+
+    parseQuestions(questionArr) {
+        return questionArr.map(q => {
+            return {
+                question_id: q['topic_id'],
+                question_topic: q['topic_title'] ? q['topic_title']['en'] : '',
+                question_text: q['topic_name']['en'],
+            };
         });
     }
 }
