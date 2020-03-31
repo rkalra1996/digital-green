@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
 const path_1 = require("path");
@@ -18,7 +21,8 @@ const language_translation_service_1 = require("../language-translation/language
 const sentiment_analysis_service_1 = require("../sentiment-analysis/sentiment-analysis.service");
 const google_cloud_sdk_service_1 = require("../google-cloud-sdk/google-cloud-sdk.service");
 let GcloudService = class GcloudService {
-    constructor(gcloudSDK, sttSrvc, ltSrvc, saSrvc) {
+    constructor(logger, gcloudSDK, sttSrvc, ltSrvc, saSrvc) {
+        this.logger = logger;
         this.gcloudSDK = gcloudSDK;
         this.sttSrvc = sttSrvc;
         this.ltSrvc = ltSrvc;
@@ -29,23 +33,23 @@ let GcloudService = class GcloudService {
     uploadFilesToGCloud(parentFolderAddrObject, bucketName, cloudFilePath) {
         return new Promise((resolve, reject) => {
             if (!bucketName) {
-                console.log('bucket name not provided, using default bucket ', this._DEFAULT_BUCKET_NAME);
+                this.logger.info(`bucket name not provided, using default bucket ${this._DEFAULT_BUCKET_NAME}`);
                 bucketName = this._DEFAULT_BUCKET_NAME;
             }
             const uploadPromises = [];
             if (parentFolderAddrObject.hasOwnProperty('filePaths')) {
                 if (!cloudFilePath) {
-                    console.log('Cannot upload file paths if cloud dest path is not given (mandatory)');
+                    this.logger.error('Cannot upload file paths if cloud dest path is not given (mandatory)');
                     reject('Cannot upload file paths if cloud dest path is not given (mandatory)');
                     return;
                 }
                 else {
                     parentFolderAddrObject.filePaths.forEach(filePath => {
-                        console.log('uploading filepath -> ', filePath);
+                        this.logger.info(`uploading filepath -> ${filePath}`);
                         const fileInfoArr = filePath.split('/');
-                        console.log('file split information ', fileInfoArr);
+                        this.logger.info('file split information ', fileInfoArr);
                         cloudFilePath = `${cloudFilePath}/${fileInfoArr[fileInfoArr.length - 1]}`;
-                        console.log('triggering upload in cloud dir -->', cloudFilePath);
+                        this.logger.info('triggering upload in cloud dir -->', cloudFilePath);
                         uploadPromises.push(this.storage.bucket(bucketName).upload(filePath, {
                             destination: cloudFilePath,
                             resumable: false,
@@ -57,7 +61,8 @@ let GcloudService = class GcloudService {
                 const pathToFiles = path_1.resolve(parentFolderAddrObject.parentFolderAddress, parentFolderAddrObject.filesParentFolderAddr);
                 fs_1.readdir(pathToFiles, (err, dirData) => {
                     if (err) {
-                        console.log(err);
+                        this.logger.error('An error occured while reading parent folder details for gcloud upload');
+                        this.logger.error(err);
                         reject('An Error occured while reading parent folder details for gcloud upload');
                     }
                     else {
@@ -70,7 +75,7 @@ let GcloudService = class GcloudService {
                                 else {
                                     cloudFilePath = `${cloudFilePath}/${dirItem}`;
                                 }
-                                console.log('triggering upload in cloud dir -->', cloudFilePath);
+                                this.logger.info(`triggering upload in cloud dir --> ${cloudFilePath}`);
                                 uploadPromises.push(this.storage.bucket(bucketName).upload(pathToFile, {
                                     destination: cloudFilePath,
                                     resumable: false,
@@ -85,26 +90,28 @@ let GcloudService = class GcloudService {
                 resolve(true);
             })
                 .catch(err => {
-                console.log(err);
+                this.logger.error(err);
                 reject(null);
             });
         });
     }
     async startSpeechToTextConversion(dataObj) {
-        console.log('starting speech to text conversion with info ', dataObj);
+        this.logger.info(`starting speech to text conversion with info ${JSON.stringify(dataObj)}`);
         const s2tResult = await this.sttSrvc.initiate(dataObj);
         if (s2tResult['ok']) {
+            this.logger.info('recieved response from speech to text api');
             const cleanedResult = this.sttSrvc.cleanResult(s2tResult['data']);
             return Promise.resolve({ ok: true, data: cleanedResult });
         }
         else {
+            this.logger.info('catched error from speech to text api');
             return Promise.reject({ ok: false, status: 500, error: 'An Error occured while completing speech to text sequence' });
         }
     }
     async startLanguageTranslation(dataObj) {
-        console.log('starting language translation with data ', dataObj);
+        this.logger.info(`starting language translation with data ${JSON.stringify(dataObj)}`);
         if (dataObj['speech_to_text_status'] === 'DONE') {
-            console.log('speech to text data detected, proceeding to language translation');
+            this.logger.info('speech to text data detected, proceeding to language translation');
             const ltResult = await this.ltSrvc.initiate(dataObj);
             if (ltResult['ok']) {
                 return Promise.resolve({ ok: true, data: ltResult['data'] });
@@ -115,23 +122,23 @@ let GcloudService = class GcloudService {
                     session_id: dataObj['session_id'],
                     topic_name: dataObj['topic_name'],
                 };
-                console.log('sending error data as ', errorData);
                 return Promise.reject({ ok: false, status: 500, error: 'An Error occured while completing language translation sequence', data: errorData });
             }
         }
         else {
-            console.log(`speech_to_text_status is not DONE, it is ${dataObj['speech_to_text_status']} cannot proceed to language translation sequence`);
+            this.logger.error(`speech_to_text_status is not DONE, it is ${dataObj['speech_to_text_status']} cannot proceed to language translation sequence`);
             return Promise.reject({ ok: false, status: 503, error: 'Speech To Text did not completed successfully, ABORTING THE PIPELINE' });
         }
     }
     startSentimentAnalysis() {
-        console.log('starting sentiment analysis');
+        this.logger.info('starting sentiment analysis');
         this.saSrvc.initiate({});
     }
 };
 GcloudService = __decorate([
     common_1.Injectable(),
-    __metadata("design:paramtypes", [google_cloud_sdk_service_1.GoogleCloudSdkService,
+    __param(0, common_1.Inject('winston')),
+    __metadata("design:paramtypes", [Object, google_cloud_sdk_service_1.GoogleCloudSdkService,
         speech_to_text_service_1.SpeechToTextService,
         language_translation_service_1.LanguageTranslationService,
         sentiment_analysis_service_1.SentimentAnalysisService])

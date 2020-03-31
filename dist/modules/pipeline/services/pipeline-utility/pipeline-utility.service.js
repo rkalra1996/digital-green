@@ -16,13 +16,15 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 let PipelineUtilityService = class PipelineUtilityService {
-    constructor(SessionModel) {
+    constructor(logger, SessionModel) {
+        this.logger = logger;
         this.SessionModel = SessionModel;
     }
     updateSessionTopicInDB(userInfoObj, dataToAdd) {
+        this.logger.info('recieved data to update in database as ' + JSON.stringify(dataToAdd));
         return new Promise((res, rej) => {
             if (userInfoObj['session_id'] && userInfoObj['username'] && userInfoObj['topic_name']) {
-                console.log('saving data for session id ', userInfoObj['session_id']);
+                this.logger.info(`saving data for session id ', ${userInfoObj['session_id']}`);
                 this.SessionModel.findOne({ username: userInfoObj['username'], session_id: userInfoObj['session_id'] }).then(data => {
                     const selectedTopicIdx = data['topics'].findIndex(topic => topic['topic_name'] === userInfoObj['topic_name']);
                     if (selectedTopicIdx > -1) {
@@ -30,28 +32,32 @@ let PipelineUtilityService = class PipelineUtilityService {
                         data['topics'][selectedTopicIdx] = newTopic;
                         this.SessionModel.updateOne({ session_id: userInfoObj['session_id'] }, { topics: data['topics'] })
                             .then(updateRes => {
-                            console.log('update res ', updateRes);
+                            this.logger.info(`update res , ${JSON.stringify(updateRes)}`);
                             res(true);
                         })
                             .catch(updateErr => {
-                            console.log('update Error', updateErr);
+                            this.logger.info('update Error into the database');
+                            this.logger.error(updateErr);
                             rej('An error occured while saving the updated topic details');
                         });
                     }
                     else {
-                        console.log('did not find the topic which needs to be updated');
+                        this.logger.error('did not find the topic which needs to be updated');
                     }
                 }).catch(findErr => {
-                    console.log('error while getting topics using session id ', findErr);
+                    this.logger.info('error while getting topics using session id ');
+                    this.logger.error(findErr);
                     rej('An error occured while finding topic using the session id');
                 });
             }
             else {
+                this.logger.error('session id not available inside user object while updating in sessionDB');
                 rej('session id not available inside user object while updating in sessionDB');
             }
         });
     }
     updateSessionTopicStatusFailure(userObj, dataToAdd) {
+        this.logger.info('data recieved to update failure status in db -->' + JSON.stringify(dataToAdd));
         return new Promise((res, rej) => {
             this.updateSessionTopicInDB(userObj, dataToAdd)
                 .then(updated => {
@@ -65,8 +71,9 @@ let PipelineUtilityService = class PipelineUtilityService {
 };
 PipelineUtilityService = __decorate([
     common_1.Injectable(),
-    __param(0, mongoose_1.InjectModel('sessions')),
-    __metadata("design:paramtypes", [mongoose_2.Model])
+    __param(0, common_1.Inject('winston')),
+    __param(1, mongoose_1.InjectModel('sessions')),
+    __metadata("design:paramtypes", [Object, mongoose_2.Model])
 ], PipelineUtilityService);
 exports.PipelineUtilityService = PipelineUtilityService;
 //# sourceMappingURL=pipeline-utility.service.js.map

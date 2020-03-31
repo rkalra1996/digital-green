@@ -11,13 +11,15 @@ const webhook_controller_1 = require("./controllers/webhook/webhook.controller")
 const google_cloud_webhook_handler_service_1 = require("./services/google-cloud-webhook-handler/google-cloud-webhook-handler.service");
 const sessions_module_1 = require("../sessions/sessions.module");
 const pipeline_module_1 = require("../pipeline/pipeline.module");
+const shared_service_1 = require("./../../services/shared/shared.service");
+const path_resolver_service_1 = require("./../../services/path-resolver/path-resolver.service");
 let WebhooksModule = class WebhooksModule {
 };
 WebhooksModule = __decorate([
     common_1.Module({
         controllers: [webhook_controller_1.WebhookController],
         imports: [sessions_module_1.SessionsModule, pipeline_module_1.PipelineModule],
-        providers: [google_cloud_webhook_handler_service_1.GoogleCloudWebhookHandlerService],
+        providers: [path_resolver_service_1.PathResolverService, shared_service_1.SharedService, google_cloud_webhook_handler_service_1.GoogleCloudWebhookHandlerService],
     })
 ], WebhooksModule);
 exports.WebhooksModule = WebhooksModule;

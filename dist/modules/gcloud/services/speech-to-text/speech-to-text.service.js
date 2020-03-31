@@ -8,11 +8,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
 const google_cloud_sdk_service_1 = require("../google-cloud-sdk/google-cloud-sdk.service");
 let SpeechToTextService = class SpeechToTextService {
-    constructor(googleSDK) {
+    constructor(logger, googleSDK) {
+        this.logger = logger;
         this.googleSDK = googleSDK;
         this.googleSpeech = this.googleSDK.getSpeechInstance;
     }
@@ -34,15 +38,16 @@ let SpeechToTextService = class SpeechToTextService {
                 .then(responses => {
                 return responses[0].promise();
             }).then(finalRes => {
-                console.log('final result from speech to text gave ');
-                console.log(JSON.stringify(finalRes[0].results));
+                this.logger.info('final result from speech to text gave ');
+                this.logger.info(JSON.stringify(finalRes[0].results));
                 const speechToTextData = Object.assign({}, details);
                 speechToTextData['speech_to_text_result'] = finalRes[0].results;
                 speechToTextData['transcript'] = this.getParsedResponse(finalRes[0].results);
                 res({ ok: true, data: speechToTextData });
             })
                 .catch(s2tErr => {
-                console.log('An error occured while capturing result from speech to text', s2tErr);
+                this.logger.error('An error occured while capturing result from speech to text');
+                this.logger.error(s2tErr);
                 rej({ ok: false, status: 500, error: 'An error occured while capturing result from speech to text' });
             });
         });
@@ -80,14 +85,15 @@ let SpeechToTextService = class SpeechToTextService {
             return newAlternatives;
         }
         else {
-            console.log('new alternatives array is either empty or invalid array');
+            this.logger.info('new alternatives array is either empty or invalid array, returning empty array instead');
             return [];
         }
     }
 };
 SpeechToTextService = __decorate([
     common_1.Injectable(),
-    __metadata("design:paramtypes", [google_cloud_sdk_service_1.GoogleCloudSdkService])
+    __param(0, common_1.Inject('winston')),
+    __metadata("design:paramtypes", [Object, google_cloud_sdk_service_1.GoogleCloudSdkService])
 ], SpeechToTextService);
 exports.SpeechToTextService = SpeechToTextService;
 //# sourceMappingURL=speech-to-text.service.js.map

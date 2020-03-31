@@ -1,4 +1,7 @@
+import { Logger } from 'winston';
 export declare class FfmpegUtilityService {
+    private readonly logger;
+    constructor(logger: Logger);
     globalFilesCount: number;
     convertStereo2Mono(parentFolderAddr: any, fileName?: string, finalCallBack?: any): Promise<void | {
         ok: boolean;

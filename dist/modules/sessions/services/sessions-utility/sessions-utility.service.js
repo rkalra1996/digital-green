@@ -21,16 +21,18 @@ const gcloud_service_1 = require("./../../../gcloud/services/gcloud/gcloud.servi
 const ffmpeg_utility_service_1 = require("../../../../services/ffmpeg-utility/ffmpeg-utility.service");
 const user_utility_service_1 = require("../../../users/services/user-utility/user-utility.service");
 let SessionsUtilityService = class SessionsUtilityService {
-    constructor(SessionModel, pathResolver, gcloudSrvc, ffmpeg, userUtilitySrvc) {
+    constructor(logger, SessionModel, pathResolver, gcloudSrvc, ffmpeg, userUtilitySrvc) {
+        this.logger = logger;
         this.SessionModel = SessionModel;
         this.pathResolver = pathResolver;
         this.gcloudSrvc = gcloudSrvc;
         this.ffmpeg = ffmpeg;
         this.userUtilitySrvc = userUtilitySrvc;
     }
-    async getSessionList(username) {
+    async getSessionList(username, dateFilterObj) {
         return new Promise((resolve, reject) => {
-            this.SessionModel.find({ username }).sort('-created')
+            const query = this.getSessionQuery(dateFilterObj, username);
+            this.SessionModel.find(query).sort('-created')
                 .then(sessionList => {
                 if (Array.isArray(sessionList)) {
                     resolve(sessionList);
@@ -39,11 +41,33 @@ let SessionsUtilityService = class SessionsUtilityService {
                     resolve([]);
                 }
             }).catch(err => {
-                console.log('Error while fetching sessions list for ', username);
-                console.log(err);
+                this.logger.error('Error while fetching sessions list for ');
+                this.logger.error(err);
                 resolve(null);
             });
         });
+    }
+    getSessionQuery(dateFilterObj, username) {
+        let q = username ? { username } : {};
+        if (dateFilterObj) {
+            if (dateFilterObj['from']) {
+                q['created'] = { $gte: new Date(dateFilterObj['from']), $lte: this.getCompleteDay(dateFilterObj['to']) };
+            }
+            else {
+                q['created'] = { $lte: this.getCompleteDay(dateFilterObj['to']) };
+            }
+        }
+        else {
+            this.logger.info('no date filter object supplied, will not use it either');
+        }
+        this.logger.info('final query created as ' + JSON.stringify(q));
+        return q;
+    }
+    getCompleteDay(date) {
+        const dateArray = new Date(date).toLocaleString().split(',');
+        dateArray[1] = ' 23:59:59';
+        const newDate = dateArray.join(',');
+        return new Date(newDate);
     }
     validateSessionObject(sessionData) {
         if (!sessionData ||
@@ -102,36 +126,40 @@ let SessionsUtilityService = class SessionsUtilityService {
     }
     async createUserSessionsInBatch(sessions) {
         return new Promise((resolve, reject) => {
-            console.log('inserting ', sessions);
+            this.logger.info(`inserting ', ${JSON.stringify(sessions)}`);
             if (sessions.length > 1) {
-                console.log('cannot insert more than one sessions at a time');
+                this.logger.info('cannot insert more than one sessions at a time');
                 resolve({ ok: false, error: 'Multiple sessions sent for insert' });
             }
             else {
                 const sessionToInsert = sessions[0];
-                console.log('session to insert is ', sessionToInsert);
+                this.logger.info(`session to insert is ', ${JSON.stringify(sessionToInsert)}`);
                 this.SessionModel.find({ session_id: sessionToInsert.session_id })
                     .then(sessionRead => {
-                    console.log('session read is ', sessionRead);
+                    this.logger.info(`session read is ', ${JSON.stringify(sessionRead)}`);
                     if (Array.isArray(sessionRead) && sessionRead.length < 1) {
-                        console.log('No such session already present for ', sessionToInsert.session_id);
+                        this.logger.info(`No such session already present for ', ${sessionToInsert.session_id}`);
                         this.SessionModel.create(Object.assign({}, sessionToInsert))
                             .then(sessionCreated => {
-                            console.log('session created ', sessionCreated);
+                            this.logger.info(`session created ', ${JSON.stringify(sessionCreated)}`);
                             resolve(sessionCreated);
                         })
                             .catch(creationError => {
-                            console.log('Error while creating a new session ', creationError);
+                            this.logger.error('Error while creating a new session ');
+                            this.logger.error(creationError);
                             resolve(null);
                         });
                     }
                     else {
-                        console.log('unexpected session read response ', sessionRead);
+                        this.logger.info('unexpected session read response ');
+                        this.logger.info(sessionRead);
+                        this.logger.info(`session already exists, won't create a new one`);
                         resolve({ ok: true, message: `session already exists, won't create a new one` });
                     }
                 })
                     .catch(sessionReadErr => {
-                    console.log('error while reading an existing session', sessionReadErr);
+                    this.logger.info('error while reading an existing session');
+                    this.logger.error(sessionReadErr);
                     resolve(null);
                 });
             }
@@ -162,7 +190,8 @@ let SessionsUtilityService = class SessionsUtilityService {
                 resolve(sessionDetailsObject);
             }
             catch (e) {
-                console.log('An error occured while creating session details object ', e);
+                this.logger.info('An error occured while creating session details object ');
+                this.logger.error(e);
                 resolve(null);
             }
         });
@@ -170,18 +199,18 @@ let SessionsUtilityService = class SessionsUtilityService {
     uploadFilesToCloudStorage(username, sessionID, parentSourceAddress, fileNames) {
         if (!parentSourceAddress) {
             parentSourceAddress = path_1.resolve(this.pathResolver.paths.TEMP_STORE_PATH);
-            console.log('to upload files from ', `${username}/${sessionID}/mono inside `, parentSourceAddress);
+            this.logger.info('to upload files from ', `${username}/${sessionID}/mono inside ` + parentSourceAddress);
         }
         else {
-            console.log('to upload files from ', `${parentSourceAddress}`);
+            this.logger.info('to upload files from ' + `${parentSourceAddress}`);
         }
         let addressObject = {};
         if (Array.isArray(fileNames) && fileNames.length > 0) {
-            console.log('joining file names ', fileNames);
+            this.logger.info(`joining file names ', ${JSON.stringify(fileNames)}`);
             addressObject = {
                 filePaths: fileNames.map(fileName => path_1.resolve(parentSourceAddress, username, sessionID, 'mono', fileName)),
             };
-            console.log('object looks like', addressObject);
+            this.logger.info(`object looks like', ${addressObject}`);
         }
         else {
             addressObject = {
@@ -196,26 +225,26 @@ let SessionsUtilityService = class SessionsUtilityService {
     convertTempFilesToMono(username, sessionID, topicID) {
         return new Promise((monoResolve, monoReject) => {
             const parentFolderAddr = path_1.resolve(this.pathResolver.paths.TEMP_STORE_PATH, username, sessionID);
-            console.log('parent folder to pick files for mono conversion is ', parentFolderAddr);
+            this.logger.info('parent folder to pick files for mono conversion is ' + parentFolderAddr);
             const fileName = `${username}_${sessionID}_${topicID}.wav`;
             this.ffmpeg.convertStereo2Mono(parentFolderAddr, fileName, () => {
-                console.log('conversion to mono done');
+                this.logger.info('conversion to mono done');
                 monoResolve({ ok: true });
             });
         });
     }
     updateSessionFileStatus(sessionFileObject) {
-        console.log('updating session file status in database');
+        this.logger.info('updating session file status in database');
         return new Promise(async (sessionFileResolve, sessionFileReject) => {
             if (await this.userUtilitySrvc.userExists(sessionFileObject.username)) {
                 this.getSessionBySessionID(sessionFileObject.username, sessionFileObject.sessionID)
                     .then(fetchedSession => {
-                    console.log('fetched session from database is ');
-                    console.log(fetchedSession);
+                    this.logger.info('fetched session from database is ');
+                    this.logger.info(JSON.stringify(fetchedSession));
                     const newTopicsArray = [...fetchedSession.topics];
                     const existingTopicIndex = newTopicsArray.findIndex(topic => topic.topic_name === sessionFileObject.topicName);
                     if (existingTopicIndex > -1) {
-                        console.log('updating topic');
+                        this.logger.info('updating topic');
                         newTopicsArray[existingTopicIndex]['file_data']['bucketname'] = sessionFileObject.bucketname;
                         newTopicsArray[existingTopicIndex]['file_data']['filename'] = sessionFileObject.filename;
                         newTopicsArray[existingTopicIndex]['file_data']['mediaURI'] = sessionFileObject.gsURI;
@@ -226,7 +255,7 @@ let SessionsUtilityService = class SessionsUtilityService {
                         newTopicsArray[existingTopicIndex]['isUploaded'] = true;
                     }
                     else {
-                        console.log('new topic');
+                        this.logger.info('new topic');
                         newTopicsArray.push({
                             topic_name: sessionFileObject.topicName,
                             topic_id: sessionFileObject.topicName,
@@ -245,12 +274,12 @@ let SessionsUtilityService = class SessionsUtilityService {
                     let allUploaded = false;
                     if (newTopicsArray.length === fetchedSession['topics_limit']) {
                         if (!newTopicsArray.filter(topic => topic.isUploaded === false).length) {
-                            console.log('detected all topics having there respective cloud files');
+                            this.logger.info('detected all topics having there respective cloud files');
                             allUploaded = true;
                         }
                     }
-                    console.log('final updation object"s topics looks like ');
-                    console.log(newTopicsArray);
+                    this.logger.info('final updation object"s topics looks like ');
+                    this.logger.info(JSON.stringify(newTopicsArray));
                     this.SessionModel.updateOne({
                         username: sessionFileObject.username,
                         session_id: sessionFileObject.sessionID
@@ -258,16 +287,16 @@ let SessionsUtilityService = class SessionsUtilityService {
                         isUploaded: allUploaded !== fetchedSession.isUploaded ? allUploaded : fetchedSession.isUploaded,
                         topics: [...newTopicsArray],
                     }).then(updatedDoc => {
-                        console.log('updated doc now looks like ');
-                        console.log(updatedDoc);
+                        this.logger.info('updated doc now looks like ');
+                        this.logger.info(JSON.stringify(updatedDoc));
                         sessionFileResolve({ ok: true, data: sessionFileObject });
                     }).catch(updationError => {
-                        console.log(updationError);
+                        this.logger.error(updationError);
                         sessionFileReject({ ok: false, error: 'An Error occured while updating the database document' });
                     });
                 })
                     .catch(sessionFetchError => {
-                    console.log(sessionFetchError['error']);
+                    this.logger.error(sessionFetchError['error']);
                     sessionFileReject({ ok: false, error: sessionFetchError['error'] });
                 });
             }
@@ -278,20 +307,21 @@ let SessionsUtilityService = class SessionsUtilityService {
     }
     getSessionBySessionID(username, sessionID) {
         return new Promise((getSessionResolve, getSessionReject) => {
-            console.log('finding user ', username + ' with session id ' + sessionID);
+            this.logger.info('finding user ' + username + ' with session id ' + sessionID);
             this.SessionModel.findOne({
                 username,
                 session_id: sessionID,
             }).then(sessionDoc => {
                 if (!sessionDoc) {
-                    console.log('did not find any document in sessions collection corresponding to session_id', sessionID);
+                    this.logger.error('did not find any document in sessions collection corresponding to session_id' + sessionID);
                     getSessionReject({ ok: false, error: 'did not find any document in sessions collection corresponding to session_id ' + sessionID });
                 }
-                console.log('session object retrieved from db', sessionDoc);
+                this.logger.info('session object retrieved from db' + JSON.stringify(sessionDoc));
                 getSessionResolve(sessionDoc);
             })
                 .catch(sessionError => {
-                console.log('sessionError : ', sessionError);
+                this.logger.error('sessionError : ');
+                this.logger.error(sessionError);
                 getSessionReject({ ok: false, error: 'An error occured while verifying session username or session_id' });
             });
         });
@@ -316,8 +346,8 @@ let SessionsUtilityService = class SessionsUtilityService {
                 resolve({ ok: true, data: sessionsData });
             })
                 .catch((fetchErr) => {
-                console.log('Error while fetching session for user ', username);
-                console.log(fetchErr);
+                this.logger.info('Error while fetching session for user ' + username);
+                this.logger.error(fetchErr);
                 resolve({ ok: false, error: `Error while fetching session for user ${username}` });
             });
         });
@@ -327,6 +357,7 @@ let SessionsUtilityService = class SessionsUtilityService {
             const finalObj = {
                 name: session.name,
                 session_id: session.session_id,
+                created: session.created,
                 isUploaded: session.isUploaded,
                 username: session.username,
             };
@@ -345,8 +376,9 @@ let SessionsUtilityService = class SessionsUtilityService {
 };
 SessionsUtilityService = __decorate([
     common_1.Injectable(),
-    __param(0, mongoose_1.InjectModel('sessions')),
-    __metadata("design:paramtypes", [mongoose_2.Model,
+    __param(0, common_1.Inject('winston')),
+    __param(1, mongoose_1.InjectModel('sessions')),
+    __metadata("design:paramtypes", [Object, mongoose_2.Model,
         path_resolver_service_1.PathResolverService,
         gcloud_service_1.GcloudService,
         ffmpeg_utility_service_1.FfmpegUtilityService,

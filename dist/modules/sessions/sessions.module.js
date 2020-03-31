@@ -17,6 +17,7 @@ const shared_service_1 = require("./../../services/shared/shared.service");
 const path_resolver_service_1 = require("../../services/path-resolver/path-resolver.service");
 const gcloud_module_1 = require("../gcloud/gcloud.module");
 const ffmpeg_utility_service_1 = require("../../services/ffmpeg-utility/ffmpeg-utility.service");
+const gcloud_service_1 = require("../gcloud/services/gcloud/gcloud.service");
 let SessionsModule = class SessionsModule {
 };
 SessionsModule = __decorate([
@@ -25,9 +26,9 @@ SessionsModule = __decorate([
             mongoose_1.MongooseModule.forFeature([{ name: 'sessions', schema: sessions_schema_1.SessionSchema }]),
             users_module_1.UsersModule, gcloud_module_1.GcloudModule
         ],
-        providers: [sessions_service_1.SessionsService, sessions_utility_service_1.SessionsUtilityService, shared_service_1.SharedService, path_resolver_service_1.PathResolverService, ffmpeg_utility_service_1.FfmpegUtilityService],
+        providers: [sessions_service_1.SessionsService, sessions_utility_service_1.SessionsUtilityService, shared_service_1.SharedService, path_resolver_service_1.PathResolverService, ffmpeg_utility_service_1.FfmpegUtilityService, gcloud_service_1.GcloudService],
         controllers: [sessions_controller_1.SessionsController],
-        exports: [sessions_utility_service_1.SessionsUtilityService],
+        exports: [sessions_utility_service_1.SessionsUtilityService, path_resolver_service_1.PathResolverService, gcloud_service_1.GcloudService, ffmpeg_utility_service_1.FfmpegUtilityService],
     })
 ], SessionsModule);
 exports.SessionsModule = SessionsModule;

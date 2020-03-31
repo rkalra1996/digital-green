@@ -8,27 +8,34 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
 const sessions_utility_service_1 = require("../../../sessions/services/sessions-utility/sessions-utility.service");
 const pipeline_core_service_1 = require("./../../../pipeline/services/pipeline-core/pipeline-core.service");
+const shared_service_1 = require("./../../../../services/shared/shared.service");
 let GoogleCloudWebhookHandlerService = class GoogleCloudWebhookHandlerService {
-    constructor(sessionUtilitySrvc, pipelineSrvc) {
+    constructor(logger, sessionUtilitySrvc, pipelineSrvc, sharedService) {
+        this.logger = logger;
         this.sessionUtilitySrvc = sessionUtilitySrvc;
         this.pipelineSrvc = pipelineSrvc;
+        this.sharedService = sharedService;
     }
     handleWebhookEvent(webhookData) {
         return new Promise((resolve, reject) => {
             const fileInfo = this.getFileInfo(webhookData);
-            console.log(fileInfo);
+            this.logger.info(fileInfo);
             this.sessionUtilitySrvc.updateSessionFileStatus(fileInfo)
                 .then(response => {
-                console.log('file record updated in the session collection successfully');
+                this.logger.info('file record updated in the session collection successfully');
+                this.deleteTempFile(fileInfo);
                 resolve({ ok: true });
                 this.pipelineSrvc.initiate(response.data);
             })
                 .catch(error => {
-                console.log(error['error']);
+                this.logger.error(error['error']);
                 reject({ ok: false, error: error['error'] });
             });
         });
@@ -57,11 +64,22 @@ let GoogleCloudWebhookHandlerService = class GoogleCloudWebhookHandlerService {
             modifiedOn,
         };
     }
+    deleteTempFile(fileObj) {
+        this.logger.info('file has been saved properly, now time to delete it from temp store');
+        const monofilePath = `${fileObj['username']}/${fileObj['sessionID']}/mono/${fileObj['filename']}`;
+        const processedFilePath = `${fileObj['username']}/processed/${fileObj['sessionID']}/${fileObj['filename'].split('mono_')[1]}`;
+        this.logger.info('mono file path is ' + monofilePath);
+        this.logger.info('processed file path is ' + processedFilePath);
+        this.sharedService.deleteFileFromTempStorage(monofilePath);
+        this.sharedService.deleteFileFromTempStorage(processedFilePath);
+    }
 };
 GoogleCloudWebhookHandlerService = __decorate([
     common_1.Injectable(),
-    __metadata("design:paramtypes", [sessions_utility_service_1.SessionsUtilityService,
-        pipeline_core_service_1.PipelineCoreService])
+    __param(0, common_1.Inject('winston')),
+    __metadata("design:paramtypes", [Object, sessions_utility_service_1.SessionsUtilityService,
+        pipeline_core_service_1.PipelineCoreService,
+        shared_service_1.SharedService])
 ], GoogleCloudWebhookHandlerService);
 exports.GoogleCloudWebhookHandlerService = GoogleCloudWebhookHandlerService;
 //# sourceMappingURL=google-cloud-webhook-handler.service.js.map

@@ -14,21 +14,23 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
 const user_service_1 = require("../../services/user/user.service");
+const passport_1 = require("@nestjs/passport");
 let UserController = class UserController {
     constructor(logger, userService) {
         this.logger = logger;
         this.userService = userService;
     }
     async registerUser(requestBody, response) {
-        console.log('POST user/register');
+        this.logger.info('POST user/register');
         const isRegistered = await this.userService.register(requestBody);
         if (!isRegistered['ok']) {
+            this.logger.info('returning response as ' + JSON.stringify(isRegistered));
             return response.status(isRegistered['status']).send({ status: isRegistered['status'], error: isRegistered['error'] });
         }
         return response.status(200).send(isRegistered['data']);
     }
     async userUser(requestBody, response) {
-        console.log('POST user/login');
+        this.logger.info('POST user/login');
         const loggedIn = await this.userService.login(requestBody.username, requestBody.password);
         if (!loggedIn['ok']) {
             return response.status(loggedIn['status']).send({ status: loggedIn['status'], error: loggedIn['error'] });
@@ -39,7 +41,6 @@ let UserController = class UserController {
         this.logger.info('GET /user/list hit');
         const users = await this.userService.readAllUsers(body);
         if (users['ok']) {
-            this.logger.info('sending abck users list as ' + JSON.stringify(users));
             return response.status(200).send({ status: 200, users: users['data'] });
         }
         else {
@@ -49,6 +50,7 @@ let UserController = class UserController {
     }
 };
 __decorate([
+    common_1.UseGuards(passport_1.AuthGuard('jwt')),
     common_1.Post('register'),
     __param(0, common_1.Body()), __param(1, common_1.Res()),
     __metadata("design:type", Function),

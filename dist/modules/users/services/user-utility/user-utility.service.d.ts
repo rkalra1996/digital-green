@@ -42,4 +42,10 @@ export declare class UserUtilityService {
     };
     parseUserObjForRead(userObj: any): any;
     readUsersFromDB(usersArray: any): Promise<unknown>;
+    mergeUsersWithQuestions(usersArray: any, rolesArray: any): any;
+    getRoleBasedInfo(rolesArray: any, userRole: any): {
+        role: any;
+        questions: any;
+    };
+    parseQuestions(questionArr: any): any;
 }

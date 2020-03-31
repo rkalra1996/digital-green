@@ -8,11 +8,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
 const google_cloud_sdk_service_1 = require("../google-cloud-sdk/google-cloud-sdk.service");
 let LanguageTranslationService = class LanguageTranslationService {
-    constructor(gcloudSDK) {
+    constructor(logger, gcloudSDK) {
+        this.logger = logger;
         this.gcloudSDK = gcloudSDK;
         this.translator = this.gcloudSDK.getTranslationInstance;
     }
@@ -22,11 +26,12 @@ let LanguageTranslationService = class LanguageTranslationService {
             return allTranslationRes;
         })
             .catch(allTranslationErr => {
-            console.log('An error occured while capturing all translations for a particular audio', allTranslationErr);
+            this.logger.error('An error occured while capturing all translations for a particular audio');
+            this.logger.error(allTranslationErr);
         });
     }
     cleanMergedData(dataToClean) {
-        console.log('data recieved to clean is', dataToClean);
+        this.logger.info(`data recieved to clean is, ${JSON.stringify(dataToClean)}`);
         const cleanedData = [];
         dataToClean.forEach(translationObj => {
             const newTranslationObj = {
@@ -39,8 +44,26 @@ let LanguageTranslationService = class LanguageTranslationService {
             newTranslationObj.languageCode = 'en-us';
             cleanedData.push(newTranslationObj);
         });
-        console.log('cleaned data is ', JSON.stringify(cleanedData));
+        this.logger.info(`cleaned data is  ${JSON.stringify(cleanedData)}`);
         return cleanedData;
+    }
+    getCombinedTranscriptEN(data) {
+        const combinedEnTranslation = data.reduce((acc, currentObj) => {
+            if (currentObj.hasOwnProperty('alternatives') && currentObj.alternatives.length > 0) {
+                let collectedTranslation = '';
+                currentObj.alternatives.forEach(altObj => {
+                    if (altObj.hasOwnProperty('translation') && altObj.translation.length > 0) {
+                        collectedTranslation += altObj.translation;
+                    }
+                });
+                return acc + collectedTranslation;
+            }
+            else {
+                return acc;
+            }
+        }, '');
+        this.logger.info('combined en translation is ' + combinedEnTranslation);
+        return combinedEnTranslation;
     }
     async initiate(detailsObj) {
         if (detailsObj.hasOwnProperty('speech_to_text_result')) {
@@ -49,37 +72,39 @@ let LanguageTranslationService = class LanguageTranslationService {
             const transdata = await this.updateTranslation(translatedpromise);
             const mergedata = this.mergeTranslation(transdata, originalTranscriptResult);
             const cleanedData = this.cleanMergedData(mergedata);
+            const combinedTranscriptEN = this.getCombinedTranscriptEN(cleanedData);
             detailsObj['translated_result'] = cleanedData;
+            detailsObj['combined_transcript_en'] = combinedTranscriptEN;
             return { ok: true, data: detailsObj };
         }
         else {
-            console.log('looks like speech to text data is not present for translation, aborting the translate language sequence');
+            this.logger.info('looks like speech to text data is not present for translation, aborting the translate language sequence');
             return { ok: false, status: 500, error: 'Speech to Text Data is not present for language translation' };
         }
     }
     mergeTranslation(transdata, originalTranscriptResult) {
         const origdatawithtranslation = [];
-        console.log('recieved transdata as ', transdata);
+        this.logger.info(`recieved transdata as , ${JSON.stringify(transdata)}`);
         originalTranscriptResult.forEach((originalObject, originalIndex) => {
-            console.log('picking translation as ', transdata[originalIndex][0]);
+            this.logger.info(`picking translation as  ${transdata[originalIndex][0]}`);
             originalObject['alternatives'][0]['translation'] = Array.isArray(transdata[originalIndex]) ? transdata[originalIndex][0] : transdata[originalIndex];
-            console.log('assigned new object is ', originalObject);
+            this.logger.info(`assigned new object is  ${JSON.stringify(originalObject)}`);
             origdatawithtranslation.push(originalObject);
         });
-        console.log('returning updated speech to text data as ', origdatawithtranslation);
+        this.logger.info(`returning updated speech to text data as  ${origdatawithtranslation}`);
         return origdatawithtranslation;
     }
     startTranslation(speechToTextDataSet) {
         return new Promise((res, rej) => {
-            console.log('startTranslation ');
-            console.log(JSON.stringify(speechToTextDataSet));
+            this.logger.info('startTranslation ');
+            this.logger.info(JSON.stringify(speechToTextDataSet));
             const translationsPromises = [];
             speechToTextDataSet.forEach((speechContent, originalIndex) => {
                 if (speechContent.languageCode === 'en-us') {
                     translationsPromises.splice(originalIndex, 0, Promise.resolve(speechContent.alternatives[0].transcript));
                 }
                 else {
-                    console.log('translating ', speechContent['alternatives'][0]['transcript']);
+                    this.logger.info(`translating ', ${speechContent['alternatives'][0]['transcript']}`);
                     translationsPromises.splice(originalIndex, 0, this.translator.translate(speechContent['alternatives'][0]['transcript'], { to: 'en', model: 'nmt' }));
                 }
             });
@@ -89,7 +114,8 @@ let LanguageTranslationService = class LanguageTranslationService {
 };
 LanguageTranslationService = __decorate([
     common_1.Injectable(),
-    __metadata("design:paramtypes", [google_cloud_sdk_service_1.GoogleCloudSdkService])
+    __param(0, common_1.Inject('winston')),
+    __metadata("design:paramtypes", [Object, google_cloud_sdk_service_1.GoogleCloudSdkService])
 ], LanguageTranslationService);
 exports.LanguageTranslationService = LanguageTranslationService;
 //# sourceMappingURL=language-translation.service.js.map

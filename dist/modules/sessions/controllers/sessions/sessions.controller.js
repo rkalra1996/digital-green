@@ -18,12 +18,13 @@ const sessions_utility_service_1 = require("../../services/sessions-utility/sess
 const passport_1 = require("@nestjs/passport");
 const platform_express_1 = require("@nestjs/platform-express");
 let SessionsController = class SessionsController {
-    constructor(sessionsSrvc, sessionsUSrvc) {
+    constructor(logger, sessionsSrvc, sessionsUSrvc) {
+        this.logger = logger;
         this.sessionsSrvc = sessionsSrvc;
         this.sessionsUSrvc = sessionsUSrvc;
     }
     async getSessions(requestBody, response) {
-        console.log('POST sessions/read');
+        this.logger.info('POST sessions/read');
         const getSessions = await this.sessionsSrvc.getUserSessions(requestBody.username);
         if (getSessions['ok']) {
             return response.status(200).send({ status: 200, data: getSessions['data'] });
@@ -31,7 +32,7 @@ let SessionsController = class SessionsController {
         return response.status(getSessions['status']).send({ status: getSessions['status'], error: getSessions['error'] });
     }
     async createSessions(requestBody, response) {
-        console.log('POST sessions/create');
+        this.logger.info('POST sessions/create');
         const isBodyValid = await this.sessionsUSrvc.validateSessionBody(requestBody);
         if (isBodyValid['ok']) {
             const sessionsCreated = await this.sessionsSrvc.createUserSessions(requestBody);
@@ -45,26 +46,27 @@ let SessionsController = class SessionsController {
         }
     }
     async uploadSessionToCloud(response, params, sessionRawFiles, requestBody) {
-        console.log('POST /sessions/upload');
-        console.log(sessionRawFiles);
-        console.log(requestBody);
+        this.logger.info('POST /sessions/upload');
+        this.logger.info('raw files are ', +JSON.stringify(sessionRawFiles));
+        this.logger.info('request body ' + JSON.stringify(requestBody));
         const sessionDetailsObject = await this.sessionsUSrvc.getSessionDetailsObject(sessionRawFiles);
         if (!sessionDetailsObject) {
             return response.status(500).send({ status: 500, error: 'An error occured while collecting files for upload, try again later' });
         }
         this.sessionsSrvc.initiateUpload(sessionDetailsObject)
             .then(sessionUploaded => {
-            console.log('Session uploaded started successfully');
+            this.logger.info('Session uploaded started successfully');
         })
             .catch(sessionUploadError => {
-            console.log('An error occured while complete session upload');
+            this.logger.info('An error occured while complete session upload');
+            this.logger.error(sessionUploadError);
         });
         return response.status(200).send({ status: 200, message: 'Upload procedure started successfully' });
     }
     async getSessionsStatus(response, params) {
-        console.log(`GET sessions/status/${params.username}`);
+        this.logger.info(`GET sessions/status/${params.username}`);
         if (await this.sessionsUSrvc.checkUsername(params.username)) {
-            console.log('user exists');
+            this.logger.info('user exists');
             const sessionStatus = await this.sessionsSrvc.getUserSessionsStatus(params.username);
             if (sessionStatus['ok']) {
                 return response.status(200).send({ status: 200, data: sessionStatus['data'] });
@@ -74,7 +76,7 @@ let SessionsController = class SessionsController {
             }
         }
         else {
-            console.log('user does not exist');
+            this.logger.info('user does not exist');
             return response.status(400).send({ status: 400, error: `Username ${params.username} is undefined or does not exists` });
         }
     }
@@ -111,7 +113,8 @@ __decorate([
 SessionsController = __decorate([
     common_1.UseGuards(passport_1.AuthGuard('jwt')),
     common_1.Controller('sessions'),
-    __metadata("design:paramtypes", [sessions_service_1.SessionsService,
+    __param(0, common_1.Inject('winston')),
+    __metadata("design:paramtypes", [Object, sessions_service_1.SessionsService,
         sessions_utility_service_1.SessionsUtilityService])
 ], SessionsController);
 exports.SessionsController = SessionsController;
