@@ -43,7 +43,7 @@ export class DashboardUtilityService {
                 session_name: session['name'],
                 session_created_by: userDetailsMap.get(session['username'])['name'] || '',
                 session_id: session['session_id'],
-                session_created_at: new Date(session['created']).toLocaleString(),
+                session_created_at: this.parseDateForUI(session['created']),
                 session_is_uploaded: session['isUploaded'],
                 pipeline: {
                     total_questions_allotted: session['topics_limit'],
@@ -84,8 +84,8 @@ export class DashboardUtilityService {
                 question_text: this.getQuestionText(topic['topic_id'], userRoleInfo),
                 question_uploaded: topic['isUploaded'],
                 question_recording_uri: topic['file_data']['mediaURI'],
-                question_recording_uploaded_on: new Date(topic['file_data']['uploadedOn']).toLocaleString(),
-                question_recording_modified_on: new Date(topic['file_data']['modifiedOn']).toLocaleString(),
+                question_recording_uploaded_on: this.parseDateForUI(topic['file_data']['uploadedOn']),
+                question_recording_modified_on: this.parseDateForUI(topic['file_data']['modifiedOn']),
                 question_recording_size: topic['file_data']['mediasize'],
             };
             if (topic.hasOwnProperty('speech_to_text_status')) {
@@ -177,5 +177,10 @@ export class DashboardUtilityService {
 
     mergeSessionsInfoWithUsers(sessionDetails, userDetails) {
         return this.pipelineFailureInfo(sessionDetails, userDetails);
+    }
+
+    parseDateForUI(dateString) {
+        const dateObj = new Date(dateString);
+        return `${dateObj.getMonth() + 1}/${dateObj.getDay()}/${dateObj.getFullYear()}, ${dateObj.getHours()}:${dateObj.getMinutes()}:${dateObj.getSeconds()}`;
     }
 }
