@@ -49,10 +49,12 @@ export class PipelineCoreService {
                             combined_transcript_en: ltRes['data']['combined_transcript_en'],
                         };
                         this.logger.info('updation object to send in database for language translation success is ' + JSON.stringify(updationObject));
-                        this.pipelineUtility.updateSessionTopicInDB(ltRes['data'], updationObject).then(translationUpdated => {
+                        this.pipelineUtility.updateSessionTopicInDB(ltRes['data'], updationObject)
+                        .then(translationUpdated => {
                                 this.logger.info(`updated language translation response in session DB ', ${translationUpdated}`);
-                                this.logger.info('triggering keyPhrase extraction pieline sequence');
-                                this.keyPhraseCore.startKeyPhraseExtraction(
+                                this.logger.info('sequenc completed');
+                                // this.logger.info('triggering keyPhrase extraction pieline sequence');
+                                /* this.keyPhraseCore.startKeyPhraseExtraction(
                                     {   language_translation_status: 'DONE',
                                         combined_transcript_en_status: 'DONE',
                                         ...ltRes['data'],
@@ -102,7 +104,12 @@ export class PipelineCoreService {
                                             this.logger.error(ErrStateupdated['error']);
                                         }
                                     }
-                                });
+                                }); */
+                            })
+                            // catch error when language translation status is not updated in the database properly
+                        .catch(ltupdationErr => {
+                                this.logger.info('error captured while updating in the database for language translation--> ');
+                                this.logger.error(ltupdationErr);
                             });
                     })
                     .catch(async ltErr => {
